@@ -1,0 +1,32 @@
+# Saída de build/simulação (make)
+build/
+*.vvp
+*.log
+
+# Waveforms
+*.vcd
+*.fst
+*.lxt
+*.lxt2
+*.ghw
+*.gtkw
+
+# Ferramentas de síntese/simulação comuns (Vivado/Quartus/ModelSim)
+work/
+transcript
+vsim.wlf
+*.jou
+xsim.dir/
+.Xil/
+
+# Editor / SO
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+*~
+*.swp
+*.bak
+
+# Temporários do Office (apresentação)
+~$*
+.~lock.*#
