@@ -1,0 +1,15 @@
+INFO: SEED=1
+CASE T-U-DEC-001 [Bloq]: PASS
+CASE T-U-DEC-002 [Bloq]: PASS
+CASE T-U-DEC-003 [Bloq]: PASS
+CASE T-U-DEC-004 [Bloq]: PASS
+CASE T-U-DEC-005 [Ajust]: PASS
+CASE T-U-DEC-006 [Ajust]: PASS
+CHECKER FAIL E-06 @1710000: burst cruza fronteira de 4 KB
+CASE T-U-DEC-007 [Ajust]: PASS
+CASE T-U-DEC-008 [Bloq]: PASS
+INFO: cobertura de arcos decoder leitura = 7/7
+INFO: cobertura de arcos decoder escrita = 7/7
+CASE T-U-DEC-COBERTURA [Bloq]: PASS
+RESULT: PASS tb_unit_axi_address_decoder (9 casos)
+tb/unit/tb_unit_axi_address_decoder_range_and_size_errors.v:298: $finish called at 4590000 (1ps)

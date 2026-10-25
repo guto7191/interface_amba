@@ -7,7 +7,7 @@ BUILD    = build
 # cada teste imprime "RESULT: PASS" ou "RESULT: FAIL"; a receita falha se nao houver PASS
 RUN    = vvp -n $(BUILD)/$(1) | tee $(BUILD)/$(1).log; grep -q "RESULT: PASS" $(BUILD)/$(1).log
 
-.PHONY: all test test_unit test_u_rst test_u_iob test_u_ctl test_u_ctl1 test_u_align test_u_atm audit_fork test_neg test_regress test_ram test_write test_read test_top test_param lint wave clean
+.PHONY: all test test_unit test_u_rst test_u_iob test_u_ctl test_u_ctl1 test_u_align test_u_atm test_u_dec audit_fork test_neg test_regress test_ram test_write test_read test_top test_param lint wave clean
 all: test
 test: test_ram test_write test_read test_top
 # T-S-REG-001..005: regressao do caminho AXI4-Lite
@@ -26,7 +26,7 @@ define BUILD_RUN
 endef
 
 # ---------------- nivel U: unitarios ----------------
-UNIT_TARGETS = test_u_rst test_u_iob test_u_ctl test_u_ctl1 test_u_align test_u_atm
+UNIT_TARGETS = test_u_rst test_u_iob test_u_ctl test_u_ctl1 test_u_align test_u_atm test_u_dec
 test_unit: $(UNIT_TARGETS)
 
 test_u_rst: | $(BUILD)
@@ -37,6 +37,9 @@ test_u_iob: | $(BUILD)
 
 test_u_ctl1: | $(BUILD)
 	$(call BUILD_RUN,tb_u_ctl1,rtl/sram/sram_io_buffer.v rtl/sram/derived/sram_controller_baseline.v $(MODEL) tb/unit/tb_unit_sram_controller_baseline_phase1_smoke.v)
+
+test_u_dec: | $(BUILD)
+	$(call BUILD_RUN,tb_u_dec,rtl/axi4_sram/axi_address_decoder.v tb/models/axi4_downstream_subordinate_stub.v $(CHK) tb/unit/tb_unit_axi_address_decoder_range_and_size_errors.v)
 
 test_u_align: | $(BUILD)
 	$(call BUILD_RUN,tb_u_align,rtl/axi4_sram/axi_narrow_read_align.v tb/unit/tb_unit_axi_narrow_read_align_byte_lanes.v)
