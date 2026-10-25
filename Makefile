@@ -7,7 +7,7 @@ BUILD    = build
 # cada teste imprime "RESULT: PASS" ou "RESULT: FAIL"; a receita falha se nao houver PASS
 RUN    = vvp -n $(BUILD)/$(1) | tee $(BUILD)/$(1).log; grep -q "RESULT: PASS" $(BUILD)/$(1).log
 
-.PHONY: all test test_system test_s_axi test_s_ord test_s_arb test_s_perf test_s_sram test_s_rob test_s_sz test_s_rob_seeds test_s_sram_pessimistic test_integ test_i_ram test_i_stub test_i_equiv test_unit test_u_rst test_u_iob test_u_ctl test_u_ctl1 test_u_align test_u_atm test_u_dec audit_fork test_neg test_regress test_ram test_write test_read test_top test_param lint wave clean
+.PHONY: all test_all coverage report cov_reset test_system test_s_axi test_s_ord test_s_arb test_s_perf test_s_sram test_s_rob test_s_sz test_s_rob_seeds test_s_sram_pessimistic test_integ test_i_ram test_i_stub test_i_equiv test_unit test_u_rst test_u_iob test_u_ctl test_u_ctl1 test_u_align test_u_atm test_u_dec audit_fork test_neg test_regress test_ram test_write test_read test_top test_param lint wave clean
 all: test
 test: test_ram test_write test_read test_top
 # T-S-REG-001..005: regressao do caminho AXI4-Lite
@@ -24,6 +24,21 @@ define BUILD_RUN
 	$(IV) -o $(BUILD)/$(1) $(2)
 	@$(call RUN,$(1))
 endef
+
+# ---------------- relatorio e execucao completa ----------------
+cov_reset:
+	@mkdir -p $(BUILD)/cov; rm -f $(BUILD)/cov/*.cov
+
+coverage:
+	scripts/merge_functional_coverage_bins.sh
+
+report:
+	scripts/generate_verification_report.sh
+
+# U -> I -> S, mais regressao Lite, negativos e auditoria dos forks; relatorio ao final
+test_all: cov_reset
+	$(MAKE) test_regress test_neg audit_fork test_unit test_integ test_system
+	$(MAKE) report
 
 # ---------------- nivel S: sistema ----------------
 # cada testbench roda nas duas fases (2 = pipeline, 1 = fork da IP); +TEST=<id> e +SEED=<n> repassados

@@ -582,6 +582,28 @@ Mais os testes negativos de §4.3, um por assertiva: **10** do checker (E-01 a E
 
 ---
 
+## §8 Registro de execução e desvios (v0.3)
+
+Execução: `make test_all` (Icarus Verilog 12). Todos os casos bloqueantes em PASS nas duas fases
+(Fase 1 = fork da IP, Fase 2 = pipeline), 18 testes negativos em PASS, regressão AXI4-Lite intacta,
+`make audit_fork` limpo. Cobertura funcional: obrigatórias 100%, amostrada 64,9% (meta 60%).
+Medições: Fase 2 = 2,04 ciclos/beat na leitura e 4,04 na escrita; Fase 1 = 4,04 e 8,03.
+
+Desvios em relação ao texto acima, todos de implementação:
+
+| Item | Desvio |
+|---|---|
+| T-U-CTL-012 | A FSM tem **14** arcos legais (a estimativa de 16 em planejamento estava errada) |
+| T-I-RAM-002 e 004 | Em `tb_integration_ram_contract_backpressure_with_stub.v`, sobre `axi_transaction_manager` + controladora falsa (precisam negar `ram_accept` e reter acks) |
+| T-I-RAM-007 | Roteiro sequencial (resultado independente da temporização); `make test_i_equiv` compara os arquivos das duas fases com `cmp` |
+| T-S-PERF-004 | Montado por `scripts/generate_verification_report.sh` a partir das linhas `INFO: T-S-PERF-*` das duas fases |
+| T-S-ROB-006 | `make test_s_rob_seeds`: T-S-ROB-005 com as sementes 11 22 33 44 55 66 77 88 99 111 |
+| T-S-SRAM-006 | `make test_s_sram_pessimistic`: mesmo TB com `SRAM_T_AA=12.0` |
+| T-U-CTL-013 | Só na Fase 2 (depende dos estados da FSM nova); a Fase 1 roda os casos funcionais compartilhados, sem checagem de ciclos nem de estrutura de pulso |
+| Casos de apoio | `T-U-DEC-COBERTURA`, `T-U-SZ-TABELA`, `T-S-AXI-COBERTURA`, `T-S-SZ-D12` sem ID próprio neste plano; servem à cobertura (§4) e a D12 |
+| Cobertura funcional | Uma célula de **leitura** vale pelas 6 do eixo `wstrb`, que não se aplica a leitura; sem isso o teto seria 4536 e a meta de 60% (4666) seria impossível |
+| T-U-SZ-004 no sistema | O erro de falta de `Aligned_Address` só aparece no unitário: a busca da palavra de 32 bits mascara o desalinhamento nos testes de sistema com `AxSIZE` = 4 bytes |
+
 ## Referências
 
 1. `MAS_axi4_sram.md` — Microarchitecture Specification, documento companheiro.

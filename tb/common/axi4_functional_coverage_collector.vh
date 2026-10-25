@@ -15,7 +15,7 @@ reg [8*96-1:0] cov_fname;
 
 initial begin
     $sformat(cov_fname, "build/cov/%0s.cov", `TB_NAME);
-    cov_fd = $fopen(cov_fname, "w");
+    cov_fd = $fopen(cov_fname, "a");
 end
 
 function [8*5-1:0] cov_zone(input [31:0] a);

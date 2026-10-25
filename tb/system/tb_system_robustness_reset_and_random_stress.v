@@ -16,6 +16,14 @@ module tb_system_robustness_reset_and_random_stress;
     reg [31:0] w32;
     reg [15:0] hw;
 
+    // ajusta g_id ao modo de ID declarado em cov_idmode (0 unico, 1 dois alternados, 2 dezesseis)
+    task pick_id;
+        begin
+            if (cov_idmode == 0)      g_id = 4'h0;
+            else if (cov_idmode == 1) g_id = 4'h1 + rnd(2);
+        end
+    endtask
+
     // ---------------- reset do sistema no meio de uma transacao ----------------
     task pulse_reset_and_recover;
         begin
@@ -158,8 +166,12 @@ module tb_system_robustness_reset_and_random_stress;
             for (it = 0; it < N_ROB; it = it + 1) begin
                 mode = rnd(10);
                 awd = rnd(4); ard = rnd(4); wp = rnd(3); rp = rnd(3); bd = rnd(3);
+                cov_idmode = rnd(3);                               // modo de ID desta transacao
                 if (mode < 6) begin                                // transacao unica
-                    gen_txn_params(16384, 64);
+                    gen_txn_params(16384, 255);
+                    if (g_expect_err == 0 && rnd(100) < 12)         // zona "fim da faixa"
+                        g_addr = 32'h001F_F000 + (g_addr & 32'hFFF);
+                    pick_id;
                     if (g_is_write) begin
                         cov_rdy = wp;
                         gen_write_payload;
@@ -169,12 +181,15 @@ module tb_system_robustness_reset_and_random_stress;
                         axi_read_burst(g_addr, g_id, g_len, 2'b01, g_size, ard, rp);
                     end
                 end else begin                                     // par concorrente, regioes disjuntas
-                    gen_txn_params(8192, 64);
+                    gen_txn_params(8192, 255);
+                    pick_id;
                     wa = g_addr; wl = g_len; ws = g_size; wid = g_id;
                     gen_write_payload;                             // payload da escrita (usa g_*)
-                    gen_txn_params(8192, 64);
+                    gen_txn_params(8192, 255);
+                    pick_id;
                     ra = g_addr; rl = g_len; rs = g_size; rid_l = g_id;
                     if (ra < 32'h0020_0000) ra = ra + 32'd8192;    // leitura na outra regiao
+                    rp = wp;                                       // um unico rotulo de READY por par
                     cov_rdy = wp;
                     fork
                         axi_write_burst(wa, wid, wl, 2'b01, ws, awd, wp, bd);

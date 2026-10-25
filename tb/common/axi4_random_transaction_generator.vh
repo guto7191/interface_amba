@@ -37,13 +37,20 @@ task gen_txn_params(input integer region_bytes, input integer max_len_sel);
         else if (r < 75) g_size = 3'd1;
         else             g_size = 3'd0;
 
-        case (rnd(6))
-            0: g_len = 8'd0;   1: g_len = 8'd1;   2: g_len = 8'd3;
-            3: g_len = 8'd7;   4: g_len = 8'd15;  default: g_len = (max_len_sel > 15) ? rnd(max_len_sel) : 8'd3;
-        endcase
+        // comprimentos dos bins de cobertura {0,1,3,15,63,255}; max_len_sel limita o maximo
+        r = rnd(100);
+        if (r < 25)      g_len = 8'd0;
+        else if (r < 50) g_len = 8'd1;
+        else if (r < 75) g_len = 8'd3;
+        else if (r < 92) g_len = 8'd15;
+        else if (r < 98) g_len = 8'd63;
+        else             g_len = 8'd255;
+        if (g_len > max_len_sel) g_len = (max_len_sel >= 63) ? 8'd63 : ((max_len_sel >= 15) ? 8'd15 : max_len_sel);
 
         base = rnd(region_bytes);
         g_addr = base & ~((32'd1 << g_size) - 32'd1);          // alinhado ao tamanho
+        // bursts longos comecam perto do inicio de uma pagina de 4 KB, para caberem sem cortar
+        if (g_len >= 63) g_addr = (base & ~32'hFFF) + (rnd(8) << g_size);
 
         // nao cruzar 4 KB: reduz len ate caber
         maxbeats = (4096 - (g_addr & 32'hFFF)) >> g_size;

@@ -45,15 +45,15 @@ Este é um **documento vivo**. Cada alteração entra como nova linha aqui e, qu
 
 | Módulo | Origem | Fase | Status | Arquivo RTL previsto |
 |---|---|---|---|---|
-| `de2_115_top` | Projeto | 1 | A implementar | `rtl/board/de2_115_top.v` |
-| `reset_synchronizer` | Projeto | 1 | A implementar | `rtl/board/reset_synchronizer.v` |
-| `axi_interface_subordinate_sram` | Projeto | 1 | A implementar | `rtl/axi4_sram/axi_interface_subordinate_sram.v` |
-| `axi_address_decoder` | Projeto | 1 | A implementar | `rtl/axi4_sram/axi_address_decoder.v` |
-| `axi_narrow_read_align` | Projeto | 1 e 2 | A implementar | `rtl/axi4_sram/axi_narrow_read_align.v` |
-| `axi_transaction_manager` | Projeto (fork de IP LGPL, D10) | 1 e 2 | A implementar | `rtl/axi4_sram/derived/axi_transaction_manager.v` |
-| `sram_io_buffer` | Projeto | 1 | A implementar | `rtl/sram/sram_io_buffer.v` |
-| `sram_controller` | Projeto | 2 | A implementar | `rtl/sram/sram_controller.v` |
-| `sram_controller_baseline` | Projeto (fork de IP LGPL, D14) | 1 | A implementar | `rtl/sram/derived/sram_controller_baseline.v` |
+| `de2_115_top` | Projeto | 1 | Implementado | `rtl/board/de2_115_top.v` |
+| `reset_synchronizer` | Projeto | 1 | Implementado | `rtl/board/reset_synchronizer.v` |
+| `axi_interface_subordinate_sram` | Projeto | 1 | Implementado | `rtl/axi4_sram/axi_interface_subordinate_sram.v` |
+| `axi_address_decoder` | Projeto | 1 | Implementado | `rtl/axi4_sram/axi_address_decoder.v` |
+| `axi_narrow_read_align` | Projeto | 1 e 2 | Implementado | `rtl/axi4_sram/axi_narrow_read_align.v` |
+| `axi_transaction_manager` | Projeto (fork de IP LGPL, D10) | 1 e 2 | Implementado | `rtl/axi4_sram/derived/axi_transaction_manager.v` |
+| `sram_io_buffer` | Projeto | 1 | Implementado | `rtl/sram/sram_io_buffer.v` |
+| `sram_controller` | Projeto | 2 | Implementado | `rtl/sram/sram_controller.v` |
+| `sram_controller_baseline` | Projeto (fork de IP LGPL, D14) | 1 | Implementado | `rtl/sram/derived/sram_controller_baseline.v` |
 | `asram16_axi4_pmem` | IP (LGPL) | — | **Substituído pelo fork; mantido intocado como referência (D10)** | `rtl/third_party/ultra_embedded_asram16_axi4/asram16_axi4_pmem.v` |
 | `asram16_axi4` (FSM) | IP (LGPL) | — | **Origem do fork `sram_controller_baseline`; mantido intocado (D14)** | `rtl/third_party/ultra_embedded_asram16_axi4/asram16_axi4.v` |
 
@@ -709,6 +709,8 @@ Dado em: RDATA[(8 × Upper_Byte_Lane) + 7 : (8 × Lower_Byte_Lane)]
 
 **Casos ilegais.** `axsize > 0b010` nunca chega a este módulo, pois é barrado pelo `axi_address_decoder` (§5.3.1).
 
+**O que o módulo de fato acrescenta (medido na v0.3).** A SRAM entrega a palavra de 32 bits inteira, e o byte endereçado já está na lane `addr[1:0]` dessa palavra. Portanto, para as lanes **válidas**, a passagem direta já cumpre §A3.4.3; um mestre correto lê o byte certo mesmo sem este módulo (a mutação "alinhador desligado" só é detectada pelo caso T-S-SZ-D12). O que o módulo acrescenta é a **replicação nas lanes não usadas (D12)**. A frase acima, "sem este módulo todo beat entregaria o dado nas mesmas lanes", vale para uma memória que devolvesse o dado sempre nas lanes baixas, o que não é o caso aqui.
+
 **Ponto de instanciação.** Entre a saída do FIFO de resposta do `axi_transaction_manager` e a porta `s_axi_rdata` do wrapper. A escolha de ficar **depois** do FIFO é deliberada: o endereço e o tamanho do beat já estão no FIFO de requisições (§5.4.2), de modo que o contexto chega naturalmente junto da resposta, sem caminho paralelo e sem risco de dessincronização.
 
 **Fronteira de autoria.** O alinhamento fica **fora** do fork, em módulo próprio de autoria integral do projeto. Alternativa descartada: alinhar dentro do fork, o que reduziria o número de arquivos mas misturaria lógica nova com código derivado de terceiros, prejudicando o `diff` auditável que D10 exige.
@@ -818,8 +820,8 @@ set_input_delay -clock clk_50 -min 1.000  [get_ports {SRAM_DQ[*]}]
 | Configuração | Leitura | Escrita | Fonte |
 |---|---|---|---|
 | IP original, esperas = 7 | ~16 | ~32 | Contagem de estados de `asram16_axi4.v` |
-| **Fase 1**, esperas = 1 | ~6 | ~8 | Mesma FSM, esperas reduzidas (§6.2) |
-| **Fase 2**, `sram_controller` | **2** | **4** | §5.5.3 |
+| **Fase 1**, esperas = 1 | **~4** (medido: 4,04) | **~8** (medido: 8,03) | Mesma FSM, esperas reduzidas (§6.2). A estimativa da v0.2 (~6 na leitura) era pessimista. Medição: T-S-PERF-001/002 |
+| **Fase 2**, `sram_controller` | **2** (medido: 2,04) | **4** (medido: 4,04) | §5.5.3. Vazão mista medida: 62 MB/s (T-S-PERF-003); Fase 1: 32 MB/s |
 | Mínimo teórico | 2 | 2 | Dois acessos de 16 bits por beat de 32. A escrita da Fase 2 usa 2 ciclos por acesso (D15) |
 
 A Fase 2 **atinge o mínimo teórico na leitura** (cada acesso cabe em um ciclo, §6.2). Na escrita gasta o dobro (4 ciclos), trocando vazão por margem de temporização (D15); continua dentro de R-17.
@@ -829,7 +831,7 @@ A Fase 2 **atinge o mínimo teórico na leitura** (cada acesso cabe em um ciclo,
 | Configuração | Leitura | Escrita |
 |---|---|---|
 | IP original | ~12 MB/s | ~6 MB/s |
-| Fase 1 | ~33 MB/s | ~25 MB/s |
+| Fase 1 | ~50 MB/s | ~25 MB/s |
 | **Fase 2** | **100 MB/s** | **50 MB/s** |
 
 Cálculo da Fase 2: leitura, 4 bytes ÷ (2 ciclos × 20 ns) = 100 MB/s; escrita, 4 bytes ÷ (4 ciclos × 20 ns) = 50 MB/s.
@@ -909,19 +911,19 @@ Os identificadores de teste são definidos em `VERIFICATION_PLAN_axi4_sram.md`.
 
 | ID | Pendência | Bloqueia | Como fechar |
 |---|---|---|---|
-| **P-01** | Confirmar a ordem de `sram_be_n_o[1:0]` → `LB_N`/`UB_N` (§3.3) | Escrita parcial correta | Teste T-U-IOB com `wstrb` assimétrico |
 | **P-02** | Clock-to-out e setup reais da FPGA (§6.2) | Validação da folga de 3 ns | Primeira compilação com TimeQuest |
 | **P-04** | Valores de `set_output_delay` dependem do atraso de placa (§6.4) | Fechamento de timing | Medir ou estimar a partir do esquemático da DE2-115 |
 | **P-05** | Decidir se a Fase 2 mantém a IP `asram16_axi4` no repositório como referência | Organização do código | Decisão ao concluir a Fase 2 |
 | **P-06** | Confirmar D12 (lanes não usadas em leitura recebem dado replicado) com o mestre real | Nada: é escolha tolerante | Observar o comportamento do mestre. Trocar para zeros é alteração de uma linha em `axi_narrow_read_align` |
 | **P-07** | Transferência de 2 bytes desalinhada (`AxSIZE = 0b001`, `addr[1:0]` ímpar) tratada como passagem direta (§5.6) | Conformidade com §A3.4.3 em caso desalinhado | Decidir se há mestre que a emita. Atendê-la exige dois acessos à SRAM de 16 bits |
-| **P-08** (v0.3) | Beat W com `wstrb=0000` era perdido na IP original, travando o burst | Nada: fechada por A7 | Verificar com T-U-CTL-007 e a cobertura de `wstrb=0000` (VP §4.1) |
 
 ### §9.2.1 Pendências fechadas
 
 | ID | Pendência | Fechada em | Como foi resolvida |
 |---|---|---|---|
 | **P-03** | `awsize`/`arsize` ignorados: leitura estreita retornava 32 bits e os endereços do burst eram calculados com incremento fixo de 4 bytes | **v0.2** | Fork `axi_transaction_manager` com `calculate_addr_next` dependente de `AxSIZE` e aplicação de `Aligned_Address` (§5.4.1); módulo `axi_narrow_read_align` para o posicionamento de byte lane (§5.6); validação de tamanho com SLVERR no decoder (§5.3.1). Requisitos R-19, R-20 e R-21. Verificação: área `SZ` do plano de verificação |
+| **P-01** | Ordem de `sram_be_n_o[1:0]` → `LB_N`/`UB_N` | **v0.3** | `LB_N = sram_be_n_o[0]`, `UB_N = sram_be_n_o[1]` confirmado por T-U-IOB-005/006 (Fase 2) e pelos casos funcionais da Fase 1 |
+| **P-08** | Beat W com `wstrb=0000` perdido na IP original | **v0.3** | Alteração A7 (`ram_wr_req_o`); verificada por T-U-CTL-007 e pela cobertura de `wstrb=0000` |
 
 > O fechamento de P-03 fica condicionado aos 15 casos da área `SZ` em PASS e à regressão das suítes T-S-AXI, T-S-ORD e T-S-PERF, conforme o critério de saída do plano de verificação.
 
