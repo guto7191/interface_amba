@@ -22,6 +22,7 @@ Um caso que diga apenas "testar bursts" é considerado incompleto e não entra n
 |---|---|---|---|
 | 0.1 | 2026-10-25 | August | Versão inicial. Define níveis U/I/S/F, o ambiente, 61 casos de teste e os critérios de saída |
 | 0.2 | 2026-10-25 | August | Área `SZ`: 15 casos de `AxSIZE` e 1 negativo. Extensão E-10 ao checker. Novo eixo de cobertura (tamanho). Regressão de T-S-AXI/ORD/PERF passa a obrigatória |
+| 0.3 | 2026-10-25 | August | Acompanha a MAS v0.3: escrita da Fase 2 em 4 ciclos/beat (T-U-CTL-003/004, T-S-PERF-002); E-06 com `size` e E-10 como subconjunto de lanes; `wstrb=0000` coberto (A7); critério 13 com A1–A7 e B1–B3; alvos de Makefile novos; V-01 e V-04 fechadas |
 
 ### §0.3 Convenção de identificação
 
@@ -173,11 +174,11 @@ O checker atual (`tb/common/axi_protocol_checker.v`) **já cobre** e deve ser pr
 | **E-03 `RLAST` exclusivo** | `rlast` alto no beat `N+1` e **somente** nele. `rlast` precoce ou ausente é erro | R-04 |
 | **E-04 Contagem de beats de escrita** | Para cada AW com `awlen = N`, devem chegar `N+1` beats de W, com `wlast` apenas no último | R-02 |
 | **E-05 `BVALID` após `WLAST`** | Nenhum `bvalid` do ID antes de o `wlast` daquele burst ser aceito | R-05 |
-| **E-06 Fronteira de 4 KB** | Calcular `addr_início` e `addr_fim = addr + (len+1)*4 - 1`; acusar se `addr_início[31:12] != addr_fim[31:12]` | R-06 |
+| **E-06 Fronteira de 4 KB** | Calcular `addr_início` e `addr_fim = alinhado(addr) + ((len+1) << size) - 1`; acusar se `addr_início[31:12] != addr_fim[31:12]` | R-06 |
 | **E-07 Resposta única de escrita** | Exatamente uma resposta B por burst de escrita, nunca uma por beat | R-05 |
 | **E-08 Timeout de resposta** | Burst aceito sem resposta completa em N ciclos (padrão 2000) é deadlock. Distinto do timeout de READY já existente | — |
 | **E-09 `RRESP` consistente no burst** | Num burst de erro, todos os beats devem ter o mesmo `rresp` | R-15 |
-| **E-10 Coerência `AxSIZE` × `WSTRB`** (v0.2) | O número de strobes ativos não excede `2^AxSIZE`, e as lanes ativas são exatamente as determinadas por `Lower_Byte_Lane = addr[1:0]`. Detecta **mestre mal configurado**, que de outro modo produziria falha silenciosa: um `awsize=0` com `wstrb=4'b1111` escreveria 4 bytes onde o mestre declarou 1 | R-19, R-20 |
+| **E-10 Coerência `AxSIZE` × `WSTRB`** (v0.2) | As lanes ativas de `wstrb` são **subconjunto** das lanes permitidas, de `Lower_Byte_Lane = addr[1:0]` até `Upper_Byte_Lane` (`wstrb & ~lanes_permitidas == 0`). A leitura "exatamente" reprovaria `wstrb` parcial legítimo (T-S-AXI-014, padrão `0000`). Detecta **mestre mal configurado**, que de outro modo produziria falha silenciosa: um `awsize=0` com `wstrb=4'b1111` escreveria 4 bytes onde o mestre declarou 1 | R-19, R-20 |
 
 **Nota de compatibilidade:** o checker atual acusa `EXOKAY` como erro (linhas 72-73), com a mensagem "EXOKAY em AXI4-Lite". Como este projeto não implementa acesso exclusivo, **a regra permanece válida** em AXI4. A mensagem deve ser atualizada para "EXOKAY sem suporte a acesso exclusivo", mas a verificação é mantida de propósito, não por omissão.
 
@@ -217,11 +218,17 @@ Modelo de referência da memória, mantido pelo testbench de forma independente 
 
 **Alvos de Makefile previstos:**
 
+Os arquivos RTL são listados em `rtl/filelists/*.f` (MAS §0.4 regra 9); o Makefile não cita arquivos RTL.
+
 ```
 test_unit      → todos os T-U-*
 test_integ     → todos os T-I-*
 test_system    → todos os T-S-*
 test_regress   → T-S-REG-* (regressão do AXI4-Lite existente)
+test_neg       → todos os T-N-* (PASS quando a assertiva dispara)
+audit_fork     → critério de saída 13
+coverage       → cobertura de transições e funcional (§4)
+report         → build/report.md
 test_all       → tudo, na ordem U → I → S
 ```
 
@@ -275,8 +282,8 @@ Cada caso gera log próprio em `build/<id>.log`. O critério de falha da receita
 |---|---|---|---|---|---|
 | T-U-CTL-001 | Leitura isolada | Uma requisição `ram_rd`, endereço `0x100` | `ram_ack` em 3 ciclos; `ram_read_data` = duas palavras montadas | Contagem de ciclos; scoreboard | Bloq. |
 | T-U-CTL-002 | **Leitura em regime: 2 ciclos por beat** | 8 requisições `ram_rd` consecutivas, `ram_accept` sempre aceito | A partir da 2ª, um `ram_ack` a cada 2 ciclos | Contagem de ciclos entre acks | Ajust. |
-| T-U-CTL-003 | Escrita isolada | Uma requisição `ram_wr = 4'b1111` | `ram_ack` em 3 ciclos; ambas as palavras escritas | Scoreboard | Bloq. |
-| T-U-CTL-004 | **Escrita em regime: 2 ciclos por beat** | 8 escritas consecutivas | Um `ram_ack` a cada 2 ciclos | Contagem | Ajust. |
+| T-U-CTL-003 | Escrita isolada | Uma requisição `ram_wr = 4'b1111` | `ram_ack` em 5 ciclos; ambas as palavras escritas | Scoreboard | Bloq. |
+| T-U-CTL-004 | **Escrita em regime: 4 ciclos por beat** | 8 escritas consecutivas | Um `ram_ack` a cada 4 ciclos | Contagem | Ajust. |
 | T-U-CTL-005 | Escrita só da metade baixa | `ram_wr = 4'b0011` | Apenas a palavra baixa é acessada; metade alta intocada | Scoreboard; contagem de pulsos de `we_n` | Bloq. |
 | T-U-CTL-006 | Escrita só da metade alta | `ram_wr = 4'b1100` | Apenas a palavra alta acessada | Scoreboard | Bloq. |
 | T-U-CTL-007 | Escrita com strobe nulo | `ram_wr = 4'b0000` com `ram_rd = 0` | Nenhum acesso à SRAM; `ram_ack` imediato | Assertiva: `we_n` nunca ativa | Bloq. |
@@ -348,7 +355,7 @@ Cada caso gera log próprio em `build/<id>.log`. O critério de falha da receita
 | ID | Objetivo | Estímulo | Resposta esperada | Checagem | Sev. |
 |---|---|---|---|---|---|
 | T-S-PERF-001 | **Ciclos por beat em leitura** | Burst de leitura `len=63`, `rready` sempre alto | Fase 2: ≤ 6 ciclos por beat em regime (meta: 2). **O teste falha se exceder 6** | Medição: ciclos totais ÷ 64 beats | Ajust. |
-| T-S-PERF-002 | **Ciclos por beat em escrita** | Burst de escrita `len=63`, sem atrasos | Fase 2: ≤ 6 ciclos por beat (meta: 2) | Medição | Ajust. |
+| T-S-PERF-002 | **Ciclos por beat em escrita** | Burst de escrita `len=63`, sem atrasos | Fase 2: ≤ 6 ciclos por beat (meta: 4) | Medição | Ajust. |
 | T-S-PERF-003 | Vazão agregada | 1000 beats mistos | ≥ 33 MB/s (equivalente a 6 ciclos/beat). Registrar o valor medido | Cálculo a partir dos ciclos | Ajust. |
 | T-S-PERF-004 | **Comparação entre fases** | Mesmo estímulo nas Fases 1 e 2 | Fase 2 mensuravelmente mais rápida. Tabela comparativa para o TCC | Medição em ambas | Inform. |
 
@@ -391,7 +398,7 @@ O caminho AXI4-Lite **não é removido** (MAS §0.3). Esta suíte garante que a 
 | T-S-REG-004 | `tb_top` continua passando | Suíte existente | `RESULT: PASS` | Makefile | Bloq. |
 | T-S-REG-005 | Variação de parâmetros | Alvo `test_param` existente | Todas as configurações em PASS | Makefile | Bloq. |
 
-> **Atenção (pendência V-01, §6):** os alvos `test_write` e `test_read` do `Makefile` apontam para `rtl/axi_slave_write.v` e `rtl/axi_slave_read.v`, mas os arquivos no repositório são `axi_subordinate_write.v` e `axi_subordinate_read.v`. **T-S-REG-002 e 003 falharão na compilação** até que isso seja corrigido.
+> **Atenção (pendência V-01, §6):** os alvos `test_write` e `test_read` do `Makefile` apontam para `rtl/axi_slave_write.v` e `rtl/axi_slave_read.v`, mas os arquivos no repositório são `axi_subordinate_write.v` e `axi_subordinate_read.v`. **T-S-REG-002 e 003 falhavam na compilação**; corrigido na v0.3 (WP1).
 
 **§3.12.1 Regressão obrigatória do suporte a `AxSIZE` (v0.2)**
 
@@ -537,7 +544,7 @@ Lista fechada. Todos os itens devem ser satisfeitos antes de considerar o RTL pr
 | 10 | **Sementes de todos os testes aleatórios registradas** | Logs em `build/` |
 | 11 | **Todos os casos da área `SZ` em PASS** (v0.2) — condição para declarar P-03 fechada na MAS §9.2.1 | §3.13 |
 | 12 | **Regressão de T-S-AXI, T-S-ORD e T-S-PERF intacta** após a alteração do fork | §3.12.1 |
-| 13 | **`diff` do fork limpo:** `diff rtl/asram16_axi4_pmem.v rtl/axi_transaction_manager.v` mostra apenas A1–A6 (MAS §5.4.5) | Exigência de D10 |
+| 13 | **`diff` dos forks limpo:** `diff` entre `rtl/third_party/ultra_embedded_asram16_axi4/asram16_axi4_pmem.v` e `rtl/axi4_sram/derived/axi_transaction_manager.v` mostra apenas A1–A7 (MAS §5.4.5); o mesmo para `asram16_axi4.v` e `rtl/sram/derived/sram_controller_baseline.v`, apenas B1–B3; `rtl/third_party/` sem alteração | Exigência de D10 e D14 (`make audit_fork`) |
 
 **Casos de severidade ajustável em falha não bloqueiam**, mas exigem uma de duas ações, registrada por escrito: corrigir o RTL, ou revisar a decisão correspondente na MAS §0.2.
 
@@ -547,10 +554,10 @@ Lista fechada. Todos os itens devem ser satisfeitos antes de considerar o RTL pr
 
 | ID | Pendência | Impacto | Como fechar |
 |---|---|---|---|
-| **V-01** | O `Makefile` referencia `rtl/axi_slave_write.v` e `rtl/axi_slave_read.v`, mas os arquivos são `axi_subordinate_write.v` e `axi_subordinate_read.v`. Os alvos `test_write` e `test_read` provavelmente **não compilam** no estado atual | T-S-REG-002 e 003 falham na compilação | Corrigir os nomes no `Makefile` ao atualizar os alvos. **Não alterado nesta etapa**, que só produz documentos |
+| **V-01** (fechada na v0.3) | O `Makefile` referenciava `rtl/axi_slave_write.v` e `rtl/axi_slave_read.v`, mas os arquivos são `axi_subordinate_write.v` e `axi_subordinate_read.v`. Os alvos `test_write` e `test_read` provavelmente **não compilam** no estado atual | T-S-REG-002 e 003 falham na compilação | Corrigir os nomes no `Makefile` ao atualizar os alvos. **Não alterado nesta etapa**, que só produz documentos |
 | **V-02** | Os parâmetros de temporização do modelo da SRAM dependem do grau de velocidade real da peça montada na placa | Calibração de §2.1 | Confirmar o sufixo da peça na DE2-115 em mãos. A MAS assume o grau -10 (D8), que é a premissa conservadora |
 | **V-03** | Disponibilidade de ferramenta formal | Define se o nível F entra | Avaliar SymbiYosys. Nível F é opcional e não bloqueia os critérios de saída |
-| **V-04** | Suporte de `reg [15:0] mem [*]` (array associativo) no Icarus com `-g2012` | Implementação de §2.1.2 | Testar. Alternativa: array de 2^20 posições, que o Icarus aloca sem dificuldade |
+| **V-04** (fechada na v0.3: array fixo de 2^20 posições) | Suporte de `reg [15:0] mem [*]` (array associativo) no Icarus com `-g2012` | Implementação de §2.1.2 | Testar. Alternativa: array de 2^20 posições, que o Icarus aloca sem dificuldade |
 | **V-05** | Modelo de temporização em simulação de RTL puro não captura atraso de placa | Fidelidade de §3.10 | Aceito: a validação final de timing é no TimeQuest (MAS §6.4) e na placa, não em simulação |
 | **V-06** (v0.2) | O fork `axi_transaction_manager` e a IP original definem módulos homônimos se a renomeação A6 (MAS §5.4.5) não for feita | Compilação conjunta dos dois arquivos, necessária para o critério de saída 13 | Conferir que o módulo de FIFO foi renomeado para `axi_transaction_fifo` no fork |
 | **V-07** (v0.2) | A cobertura das linhas alteradas do fork (§4.2) exige distinguir código alterado de herdado, o que o Icarus não reporta nativamente | Meta de cobertura de A1–A6 | Rastrear manualmente contra a lista da MAS §5.4.5, ou marcar as linhas com comentário `// A<n>` no fork |

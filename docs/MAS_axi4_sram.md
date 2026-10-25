@@ -14,6 +14,7 @@
 |---|---|---|---|
 | 0.1 | 2026-10-25 | August | Versão inicial. Define a fusão da IP `asram16_axi4` com o barramento AXI4, as decisões D1–D7 e o contrato `ram_*`. Temporização calibrada pela folha de dados Rev. G da ISSI |
 | 0.2 | 2026-10-25 | August | Suporte a `AxSIZE` (1, 2 e 4 bytes): fecha P-03. Acrescenta `axi_transaction_manager` (fork LGPL da IP) e `axi_narrow_read_align`. FIFO de requisições alargado para 11 bits. Decisões D9–D13 |
+| 0.3 | 2026-10-25 | August | Ajustes de implementação: Fase 1 como fork da FSM da IP (`sram_controller_baseline`); escrita da Fase 2 em pulso + hold (4 ciclos/beat); sinal `ram_wr_req` no contrato e alteração A7 (beat com `wstrb=0`); portas de contexto de alinhamento em A5; alinhamento de `ram_addr` no wrapper; organização de diretórios (§0.4 regra 9); matriz §9.1 alinhada ao VP. Decisões D14–D18 |
 
 Este é um **documento vivo**. Cada alteração entra como nova linha aqui e, quando for decisão de projeto, como nova linha em §0.2. Nenhuma seção é reescrita silenciosamente.
 
@@ -34,23 +35,29 @@ Este é um **documento vivo**. Cada alteração entra como nova linha aqui e, qu
 | **D11** | **`AxSIZE` > `0b010` rejeitado com SLVERR** pelo `axi_address_decoder` | Truncar silenciosamente para 4 bytes; aceitar e ignorar | Transação ilegal para 32 bits. SLVERR sinaliza explicitamente, em vez de corromper em silêncio. DECERR fica reservado a erro de endereço, conforme a semântica da norma | Ativa |
 | **D12** | **Lanes não usadas em leitura recebem o dado replicado**, não zeros | Zerar as lanes não usadas; deixar indefinidas | **Não há cláusula na IHI0022E** que determine o valor dessas lanes: a Figura A3-8 apenas as marca como "bytes que não são transferidos". Replicar é o comportamento usual de subordinados comerciais e protege um mestre com máscara frouxa, que leria zeros espúrios. Registrada como **decisão, não como exigência** — ver P-06 | Ativa |
 | **D13** | **Nome do fork:** `axi_transaction_manager` — gerencia o ciclo de vida das transações AXI (endereço de burst, IDs, ordenação, arbitragem) até convertê-las em acessos `ram_*` | `axi_subordinate_burst` (cita característica do protocolo em vez da função, e colidiria com a família `axi_subordinate_write`/`_read`, sugerindo um canal inexistente); `axi_memory_frontend` (jargão, vedado por §0.4 regra 4); `axi_subordinate_full` (descreve a variante do protocolo, não a função) | Conforme §0.4 regra 3, o nome diz o que o módulo faz | Ativa |
+| **D14** (v0.3) | **Fase 1 = fork da FSM de `asram16_axi4.v`** em `sram_controller_baseline`, com o contrato `ram_*`, alterações marcadas `B1`–`B3` | Instanciar `asram16_axi4` como está | `asram16_axi4` embute o frontend original e não expõe `ram_*`. Sem o fork, T-I-RAM-007 (mesmo contrato, duas fases) e T-S-PERF-004 não seriam executáveis | Ativa |
+| **D15** (v0.3) | **Escrita da Fase 2 em pulso + hold**: 2 ciclos por meia palavra (`WE_N` baixo no 1º, alto no 2º, com endereço e dado mantidos). 4 ciclos/beat na escrita, 2 na leitura | `WE_N` de meio ciclo (2 ciclos/beat) | Evita gerar `WE_N` a partir do clock e mantém `tHA`/`tHD` com folga de um ciclo. Cumpre R-17 (4 a 6 ciclos) | Ativa |
+| **D16** (v0.3) | **Alteração A7:** `ram_wr_req_o` no fork e sinal `ram_wr_req` no contrato | Manter `ram_wr != 0` como indicador de escrita | Na IP, um beat W com `wstrb=0000` é aceito mas não gera requisição: o burst não avança e `BVALID` nunca chega (P-08) | Ativa |
+| **D17** (v0.3) | **Alinhamento de `ram_addr` no wrapper**: `{ram_addr[31:2], 2'b00}`; truncamento a 20 bits na ligação com a SRAM | Usar `ram_addr[31:1]` como a IP | `[31:1]` lê a palavra errada quando `addr[1]=1`. O posicionamento de lane é feito só por `axi_narrow_read_align` e `wstrb` | Ativa |
+| **D18** (v0.3) | **A5 inclui saídas** `resp_addr_lo_o[1:0]` e `resp_size_o[2:0]` no fork | Caminho paralelo de contexto | Entrega ao `axi_narrow_read_align` o contexto vindo do FIFO ordenado, sem risco de dessincronização (§5.6) | Ativa |
 
 ### §0.3 Status dos módulos
 
 | Módulo | Origem | Fase | Status | Arquivo RTL previsto |
 |---|---|---|---|---|
-| `de2_115_top` | Projeto | 1 | A implementar | `rtl/de2_115_top.v` |
-| `reset_synchronizer` | Projeto | 1 | A implementar | `rtl/reset_synchronizer.v` |
-| `axi_interface_subordinate_sram` | Projeto | 1 | A implementar | `rtl/axi_interface_subordinate_sram.v` |
-| `axi_address_decoder` | Projeto | 1 | A implementar | `rtl/axi_address_decoder.v` |
-| `sram_io_buffer` | Projeto | 1 | A implementar | `rtl/sram_io_buffer.v` |
-| `axi_transaction_manager` | Projeto (fork de IP LGPL, D10) | 1 e 2 | A implementar | `rtl/axi_transaction_manager.v` |
-| `axi_narrow_read_align` | Projeto | 1 e 2 | A implementar | `rtl/axi_narrow_read_align.v` |
-| `asram16_axi4_pmem` | IP (LGPL) | — | **Substituído pelo fork; mantido intocado como referência (D10)** | `rtl/asram16_axi4_pmem.v` |
-| `asram16_axi4` (FSM) | IP (LGPL) | 1 | Presente, não instanciado | `rtl/asram16_axi4.v` |
-| `sram_controller` | Projeto | 2 | A implementar | `rtl/sram_controller.v` |
+| `de2_115_top` | Projeto | 1 | A implementar | `rtl/board/de2_115_top.v` |
+| `reset_synchronizer` | Projeto | 1 | A implementar | `rtl/board/reset_synchronizer.v` |
+| `axi_interface_subordinate_sram` | Projeto | 1 | A implementar | `rtl/axi4_sram/axi_interface_subordinate_sram.v` |
+| `axi_address_decoder` | Projeto | 1 | A implementar | `rtl/axi4_sram/axi_address_decoder.v` |
+| `axi_narrow_read_align` | Projeto | 1 e 2 | A implementar | `rtl/axi4_sram/axi_narrow_read_align.v` |
+| `axi_transaction_manager` | Projeto (fork de IP LGPL, D10) | 1 e 2 | A implementar | `rtl/axi4_sram/derived/axi_transaction_manager.v` |
+| `sram_io_buffer` | Projeto | 1 | A implementar | `rtl/sram/sram_io_buffer.v` |
+| `sram_controller` | Projeto | 2 | A implementar | `rtl/sram/sram_controller.v` |
+| `sram_controller_baseline` | Projeto (fork de IP LGPL, D14) | 1 | A implementar | `rtl/sram/derived/sram_controller_baseline.v` |
+| `asram16_axi4_pmem` | IP (LGPL) | — | **Substituído pelo fork; mantido intocado como referência (D10)** | `rtl/third_party/ultra_embedded_asram16_axi4/asram16_axi4_pmem.v` |
+| `asram16_axi4` (FSM) | IP (LGPL) | — | **Origem do fork `sram_controller_baseline`; mantido intocado (D14)** | `rtl/third_party/ultra_embedded_asram16_axi4/asram16_axi4.v` |
 
-Módulos AXI4-Lite existentes (`axi_interface_subordinate_ram`, `axi_subordinate_write`, `axi_subordinate_read`, `axi_ram_adapter`, `ram`) **permanecem no repositório** e continuam funcionais. Esta MAS não os remove.
+Módulos AXI4-Lite existentes (`axi_interface_subordinate_ram`, `axi_subordinate_write`, `axi_subordinate_read`, `axi_ram_adapter`, `ram`) **permanecem no repositório**, agora em `rtl/axi4_lite_ram/`, e continuam funcionais. Esta MAS não os remove.
 
 ### §0.4 Convenção de nomeação (normativa, D7)
 
@@ -64,6 +71,13 @@ Extraída do padrão que o repositório já pratica em `axi_subordinate_write.v`
 6. **Sinais:** sufixo `_q` para registrado, `_w` para wire combinacional, `_r` para variável de bloco `always`, `_n` para ativo-baixo. Comentários em português. Verilog-2001. Reset ativo-baixo `aresetn` na fronteira AXI.
 7. **Exceção:** os módulos da IP (`asram16_axi4*`) **mantêm os nomes originais**, por serem código de terceiros sob LGPL. Renomeá-los dificultaria rastrear a origem e eventuais atualizações do autor.
 8. **Obra derivada (v0.2):** um **fork** de código de terceiros recebe nome do projeto conforme as regras 1 a 6, e **não** herda o nome original. A razão é oposta à da regra 7: o original permanece no repositório com seu nome, e o fork precisa ser distinguível dele à primeira vista. O cabeçalho do fork registra a procedência e a lista de alterações (ver §5.4.5).
+9. **Organização de diretórios (v0.3):** o diretório espelha a camada da hierarquia de §2.
+   - `rtl/board/` (pinos e reset), `rtl/axi4_sram/` (protocolo AXI), `rtl/sram/` (contrato `ram_*` e pinos da SRAM).
+   - `derived/`, dentro da camada, guarda os forks LGPL (D10, D14), separando a autoria integral do código derivado.
+   - `rtl/third_party/` guarda a IP original **intocada**; nenhuma alteração é permitida ali.
+   - `rtl/axi4_lite_ram/` guarda o caminho AXI4-Lite legado; `rtl/include/` guarda `axi_defs.vh`.
+   - `rtl/filelists/*.f` são a única fonte de verdade das listas de compilação. O Makefile não cita arquivos RTL.
+   - Um módulo por arquivo, com o nome do arquivo igual ao do módulo (exceção: o FIFO dentro do fork, para preservar o `diff`).
 
 ### §0.5 Glossário
 
@@ -149,11 +163,11 @@ Limitações já identificadas na análise da IP, que esta microarquitetura prec
 ## §2 Diagrama de blocos e hierarquia
 
 ```
-de2_115_top.v                                  (projeto — pinos físicos da placa)
+de2_115_top.v                                  (rtl/board/ — pinos físicos da placa)
  │
  ├── reset_synchronizer.v                      (projeto — KEY[0] → aresetn síncrono)
  │
- ├── axi_interface_subordinate_sram.v          (projeto — wrapper do subordinado;
+ ├── axi_interface_subordinate_sram.v          (rtl/axi4_sram/ — wrapper do subordinado;
  │    │                                         espelha axi_interface_subordinate_ram.v)
  │    │
  │    ├── axi_address_decoder.v                (projeto — faixa válida, DECERR,
@@ -168,13 +182,13 @@ de2_115_top.v                                  (projeto — pinos físicos da pl
  │    │                                         na byte lane correta, §5.6)
  │    │                                         ◄── combinacional, no caminho de rdata
  │    │
- │    │     ═══ fronteira do contrato ram_* (§3.2) ═══
+ │    │     ═══ fronteira do contrato ram_* (§3.2): axi4_sram/ │ sram/ ═══
  │    │
- │    └── Fase 1: asram16_axi4.v               (IP — FSM com esperas fixas)
+ │    └── Fase 1: sram_controller_baseline.v   (fork LGPL da FSM da IP, D14)
  │        Fase 2: sram_controller.v            (projeto — FSM com pipeline)
  │                                              ▲ a troca ocorre exatamente aqui
  │
- └── sram_io_buffer.v                          (projeto — tri-state de SRAM_DQ)
+ └── sram_io_buffer.v                          (rtl/sram/ — tri-state de SRAM_DQ)
                                                 │
                                                 ▼
                             SRAM externa IS61WV102416BLL (2 MB)
@@ -222,12 +236,13 @@ Largura de dados de 32 bits, endereço de 32 bits, ID de 4 bits.
 
 ### §3.2 Contrato `ram_*` — a interface crítica
 
-Esta é a fronteira que torna Fase 1 e Fase 2 intercambiáveis. Qualquer implementação que respeite este contrato pode substituir a outra sem alterar o frontend AXI.
+Esta é a fronteira que torna Fase 1 e Fase 2 intercambiáveis. Qualquer implementação que respeite este contrato pode substituir a outra sem alterar o frontend AXI. O `ram_addr` chega **alinhado a 4 bytes** (`[1:0] = 0`, D17).
 
 | Sinal | Dir (vista da controladora) | Largura | Descrição |
 |---|---|---|---|
 | `ram_addr` | in | 32 | Endereço em **bytes**. O bit [0] é ignorado |
-| `ram_wr` | in | 4 | Strobes de escrita. Diferente de zero indica escrita |
+| `ram_wr` | in | 4 | Strobes de escrita. Pode valer zero numa escrita (v0.3) |
+| `ram_wr_req` | in | 1 | Requisição de escrita (v0.3, D16). Distingue uma escrita de strobe nulo de ausência de requisição |
 | `ram_rd` | in | 1 | Requisição de leitura |
 | `ram_size` | in | 3 | Tamanho do beat (`2^size` bytes). **Necessário na leitura**, onde não há strobes para indicar a largura (v0.2) |
 | `ram_write_data` | in | 32 | Dado a escrever |
@@ -237,9 +252,9 @@ Esta é a fronteira que torna Fase 1 e Fase 2 intercambiáveis. Qualquer impleme
 
 **Regras normativas do contrato:**
 
-1. **Requisição:** `ram_wr != 0` ou `ram_rd == 1` indica requisição pendente. A requisição é consumida no ciclo em que `ram_accept == 1`.
-2. **Estabilidade:** enquanto a requisição não for aceita, o frontend mantém `ram_addr`, `ram_wr`, `ram_rd`, `ram_size` e `ram_write_data` estáveis.
-3. **Exclusividade:** `ram_wr != 0` e `ram_rd == 1` nunca ocorrem no mesmo ciclo. O árbitro do frontend garante isso.
+1. **Requisição:** `ram_wr_req == 1` ou `ram_rd == 1` indica requisição pendente. Com `ram_wr == 4'b0000` a controladora responde `ram_ack` sem acessar a SRAM (D16). A requisição é consumida no ciclo em que `ram_accept == 1`.
+2. **Estabilidade:** enquanto a requisição não for aceita, o frontend mantém `ram_addr`, `ram_wr`, `ram_wr_req`, `ram_rd`, `ram_size` e `ram_write_data` estáveis.
+3. **Exclusividade:** `ram_wr_req == 1` e `ram_rd == 1` nunca ocorrem no mesmo ciclo. O árbitro do frontend garante isso.
 4. **Resposta:** `ram_ack` vale por exatamente um ciclo por requisição aceita, inclusive para escritas.
 5. **Ordenação:** as respostas retornam **na mesma ordem** das requisições aceitas. É o que permite ao frontend casar cada resposta com a entrada correspondente do seu FIFO, e é o mecanismo que cumpre R-03.
 6. **Pipeline:** a controladora **pode** aceitar uma nova requisição antes de responder a anterior. O número máximo de requisições em voo é um parâmetro da implementação: 1 na Fase 1, 2 na Fase 2.
@@ -316,7 +331,7 @@ Endereço SRAM:  sram_addr[19:0] = { awaddr[20:2], metade }
                 onde metade = 0 para DQ[15:0] baixo, 1 para o alto
 ```
 
-A controladora implementa isso como `sram_address_q <= {1'b0, ram_addr_w[31:1]}` seguido de `+1` para a segunda metade. O truncamento para 20 bits ocorre na ligação com os pinos, em `de2_115_top`.
+A controladora recebe `ram_addr` já alinhado a 4 bytes (D17) e gera `sram_addr = {ram_addr[20:2], metade}`, com `metade = 0` e depois `1`. Não se usa `ram_addr[31:1]` como na IP, que lê a palavra errada quando `addr[1] = 1`. O alinhamento e o truncamento a 20 bits ocorrem em `axi_interface_subordinate_sram`.
 
 #### §4.2.1 Incremento de endereço entre beats (R-19, normativo)
 
@@ -575,7 +590,7 @@ Com o alvo de 4 a 6 ciclos por beat (R-17), isso significa latência de pior cas
 
 **§5.4.5 Alterações em relação à IP original (v0.2, D10)**
 
-Lista completa e fechada. Qualquer diferença entre `asram16_axi4_pmem.v` e `axi_transaction_manager.v` que **não** esteja nesta lista é alteração não documentada e deve ser revertida ou acrescentada aqui.
+Lista completa e fechada (A1–A7). Qualquer diferença entre `asram16_axi4_pmem.v` e `axi_transaction_manager.v` que **não** esteja nesta lista é alteração não documentada e deve ser revertida ou acrescentada aqui.
 
 | # | Alteração | Motivo | Seção |
 |---|---|---|---|
@@ -583,8 +598,9 @@ Lista completa e fechada. Qualquer diferença entre `asram16_axi4_pmem.v` e `axi
 | **A2** | `calculate_addr_next` recebe `axsize` e aplica `Aligned_Address` | Incremento fixo de 4 bytes violava §A3.4.1 | §5.4.1 |
 | **A3** | Registrador `req_axsize_q` acrescentado | Preservar o tamanho ao longo do burst | §5.4.1 |
 | **A4** | Saída `ram_size_o` acrescentada | A controladora precisa do tamanho na leitura, onde não há strobes | §3.2 |
-| **A5** | FIFO de requisições alargado de 6 para 11 bits | Transportar `addr[1:0]` e `size` até a resposta, para o alinhamento | §5.4.2 |
+| **A5** | FIFO de requisições alargado de 6 para 11 bits; saídas `resp_addr_lo_o[1:0]` e `resp_size_o[2:0]` (D18) | Transportar `addr[1:0]` e `size` até a resposta e entregá-los ao alinhamento | §5.4.2 |
 | **A6** | Módulo de FIFO renomeado para `axi_transaction_fifo` | Evitar colisão de definição quando os dois arquivos forem compilados juntos na auditoria por `diff` | — |
+| **A7** | Saída `ram_wr_req_o`; continuação de burst e `req_push_w` usam `ram_wr_req_o \|\| ram_rd_o` em vez de `ram_wr_o != 0` (D16) | Beat com `wstrb=0000` era aceito mas não gerava requisição, travando o burst | §3.2 |
 
 **Conformidade com a LGPL.** O cabeçalho do fork preserva integralmente o aviso de copyright da Ultra-Embedded e acrescenta uma nota de obra derivada com esta mesma lista. O arquivo original permanece no repositório sem alteração, de modo que a procedência e o escopo das modificações sejam verificáveis por `diff`.
 
@@ -602,33 +618,23 @@ A SRAM é **assíncrona**: não tem clock, não tem comando, não tem latência 
 
 A FSM da IP não explora isso: ela apresenta o endereço, espera, captura, e só então apresenta o seguinte, com estados de espera dedicados entre cada passo. O custo é de cerca de 16 ciclos por beat de 32 bits, somando as duas metades de 16 bits.
 
-**§5.5.2 Estrutura da FSM**
+**§5.5.2 Estrutura da FSM (v0.3, D15)**
 
-Com período de 20 ns e tAA de 10 ns, **um ciclo de clock é suficiente para um acesso de leitura**, pois o endereço fica estável por 20 ns, acima dos 10 ns exigidos. A escrita exige atenção ao pulso de `WE_N` (tPWE1 = 8 ns) e ao setup de dado (tSD = 6 ns), ambos também acomodáveis em um ciclo, conforme §6.2.
+Com período de 20 ns e tAA de 10 ns, **um ciclo de clock basta para um acesso de leitura**: o endereço fica estável por 20 ns, acima dos 10 ns exigidos. A escrita usa **dois ciclos por meia palavra** (D15): `WE_N` cai junto com endereço e dado (tSA = 0 na folha de dados) e sobe um ciclo depois, com endereço e dado mantidos por mais um ciclo. Assim a única borda de margem zero é o início do pulso, e `tPWE1` (8 ns), `tSD` (6 ns), `tAW` (8 ns) e o hold (`tHA`, `tHD`) têm folga de um ciclo inteiro (20 ns).
 
-```
-      ┌──────┐  requisição de leitura   ┌──────────┐
-      │ IDLE │─────────────────────────►│ RD_LOW   │ apresenta A, captura
-      │      │                          └─────┬────┘ nada ainda
-      │      │                                │
-      │      │                          ┌─────▼────┐
-      │      │                          │ RD_HIGH  │ apresenta A+1,
-      │      │◄─────────────────────────┤          │ captura D_low
-      │      │   sem próxima requisição └─────┬────┘
-      │      │                                │ captura D_high,
-      │      │   próxima leitura pendente     │ emite ram_ack
-      │      │◄───────────────────────────────┘
-      │      │        (vai direto a RD_LOW, sem passar por IDLE)
-      │      │
-      │      │  requisição de escrita   ┌──────────┐
-      │      │─────────────────────────►│ WR_LOW   │ A, D_low, WE_N=0
-      │      │                          └─────┬────┘
-      │      │                          ┌─────▼────┐
-      │      │                          │ WR_HIGH  │ A+1, D_high, WE_N
-      │      │◄─────────────────────────┤          │ pulsa; ram_ack
-      │      │                          └──────────┘
-      └──────┘
-```
+Implementação conforme a regra de FSM do projeto: um `always @*` de próximo estado e um `always` sequencial só para o estado.
+
+| Estado | Próximo estado (em ordem de prioridade) | Ação registrada ao entrar |
+|---|---|---|
+| `S_IDLE` | leitura → `S_RD_LOW`; escrita com `wr[1:0] != 0` → `S_WR_LOW`; escrita só com `wr[3:2] != 0` → `S_WR_HIGH`; senão `S_IDLE` (escrita nula responde `ack` sem acesso) | `oe_n=1`, `we_n=1`, `data_out_en=0` |
+| `S_RD_LOW` | → `S_RD_HIGH` | endereço baixo, `oe_n=0`, `lb_n=ub_n=0` |
+| `S_RD_HIGH` | nova leitura pendente → `S_RD_LOW` (pipeline, aceita); senão `S_IDLE` | captura a palavra baixa; apresenta endereço alto |
+| `S_WR_LOW` | → `S_WR_LOW_HOLD` | endereço baixo, dado `[15:0]`, `lb_n/ub_n = ~wr[1:0]`, `we_n=0`, `data_out_en=1` |
+| `S_WR_LOW_HOLD` | `wr[3:2] != 0` → `S_WR_HIGH`; senão `S_IDLE` (ack) | `we_n=1`, endereço e dado mantidos |
+| `S_WR_HIGH` | → `S_WR_HIGH_HOLD` | endereço alto, dado `[31:16]`, `lb_n/ub_n = ~wr[3:2]`, `we_n=0`, `data_out_en=1` |
+| `S_WR_HIGH_HOLD` | nova escrita com `wr[1:0] != 0` → `S_WR_LOW`; nova escrita só alta → `S_WR_HIGH`; senão `S_IDLE` (ack) | `we_n=1` |
+
+**Turnaround:** a troca de sentido **sempre passa por `S_IDLE`**, pois nenhuma transição liga estados de leitura a estados de escrita. Isso garante um ciclo entre `OE_N` subir e `data_out_en` subir, e o inverso, sem estado extra.
 
 **§5.5.3 Orçamento de ciclos**
 
@@ -636,21 +642,22 @@ Com período de 20 ns e tAA de 10 ns, **um ciclo de clock é suficiente para um 
 |---|---|---|---|
 | Leitura isolada | `RD_LOW` → `RD_HIGH` → `IDLE` | 3 | Inclui retorno a IDLE |
 | Leitura em regime (burst) | `RD_LOW` → `RD_HIGH` → `RD_LOW` … | **2** | Sem passar por IDLE |
-| Escrita isolada | `WR_LOW` → `WR_HIGH` → `IDLE` | 3 | — |
-| Escrita em regime | `WR_LOW` → `WR_HIGH` → `WR_LOW` … | **2** | — |
-| Escrita parcial (só `wstrb[1:0]`) | `WR_LOW` → `IDLE` | 1–2 | Dispensa a metade alta |
+| Escrita isolada | `WR_LOW` → `WR_LOW_HOLD` → `WR_HIGH` → `WR_HIGH_HOLD` → `IDLE` | 5 | — |
+| Escrita em regime | `WR_LOW` … `WR_HIGH_HOLD` → `WR_LOW` | **4** | Sem passar por IDLE |
+| Escrita parcial (só uma metade) | 2 estados da metade usada | 2–3 | Dispensa a outra metade |
+| Escrita nula (`wstrb=0000`) | `IDLE` | 1 | `ram_ack` sem acessar a SRAM |
 
-**Resultado: 2 ciclos por beat de 32 bits em regime permanente**, o que supera a meta de 4 a 6 ciclos de R-17. A margem acomoda ciclos extras de turnaround (§5.5.4) e eventual necessidade de espera adicional se o orçamento de timing de §6.2 se mostrar otimista na placa.
+**Resultado: 2 ciclos por beat na leitura e 4 na escrita**, ambos dentro de R-17 (4 a 6). A leitura atinge o mínimo teórico; a escrita paga um ciclo de hold por meia palavra em troca de margem de temporização.
 
 **§5.5.4 Condições de contorno**
 
 | Caso | Tratamento |
 |---|---|
-| **Burst de 1 beat** | Caminho isolado de 3 ciclos. Sem pipeline a explorar |
-| **Turnaround leitura→escrita** | Um ciclo de espera entre liberar `OE_N` e ativar `data_out_enable`, conforme §5.2. A FSM inclui um estado de transição ou condiciona a saída de IDLE |
-| **Escrita parcial** | `wstrb` = `4'b0011` acessa só a metade baixa; `4'b1100`, só a alta; `4'b0000` não acessa a SRAM e responde `ram_ack` imediatamente. `LB_N`/`UB_N` vêm de `~wstrb` da metade corrente |
-| **`ram_accept` durante acesso** | A controladora aceita a próxima requisição no último estado do acesso corrente, sustentando o pipeline de duas requisições em voo |
-| **Reset no meio do acesso** | `WE_N`, `OE_N` e `data_out_enable` vão a inativo de forma assíncrona, para não corromper a SRAM nem deixar o barramento em contenção. É o caso que justifica o *assert* assíncrono de §5.1 |
+| **Burst de 1 beat** | Caminho isolado (3 ciclos de leitura, 5 de escrita) |
+| **Turnaround leitura↔escrita** | Sempre via `S_IDLE`, conforme §5.5.2 e §5.2 |
+| **Escrita parcial** | `wstrb=4'b0011` acessa só a metade baixa; `4'b1100`, só a alta; `4'b0000` não acessa a SRAM e responde `ram_ack` imediatamente. `LB_N`/`UB_N` vêm de `~wstrb` da metade corrente |
+| **`ram_accept` durante acesso** | Aceita a próxima requisição no último estado do acesso corrente (`S_RD_HIGH` com leitura pendente; `S_WR_HIGH_HOLD` com escrita pendente) |
+| **Reset no meio do acesso** | `WE_N`, `OE_N` e `data_out_en` vão a inativo de forma assíncrona, para não corromper a SRAM nem deixar o barramento em contenção. É o caso que justifica o *assert* assíncrono de §5.1 |
 
 **§5.5.5 Caminho crítico**
 
@@ -771,7 +778,7 @@ O único elemento que amostra é o **flip-flop de entrada da FPGA**, comandado p
 
 **Conclusão:** um acesso de leitura cabe em **um ciclo de clock**, sem estado de espera. A folga de 3 ns é estreita, e por isso §6.4 exige confirmação no TimeQuest e §5.5.3 reserva margem no orçamento de ciclos.
 
-**Orçamento de escrita:** o pulso de `WE_N` precisa de 8 ns (tPWE1) e o dado de 6 ns de setup (tSD). Com `WE_N` ativo por um ciclo inteiro de 20 ns e o dado apresentado no mesmo ciclo, ambos são satisfeitos com folga. O hold de dado é tHD = 0 ns, o que dispensa estado extra após o pulso.
+**Orçamento de escrita (v0.3, D15):** `WE_N` fica ativo por um ciclo inteiro (20 ns), contra 8 ns de tPWE1, e o dado é apresentado no mesmo ciclo em que `WE_N` cai (20 ns contra 6 ns de tSD). No ciclo seguinte `WE_N` sobe com endereço e dado ainda mantidos, o que dá 20 ns de hold contra tHD = 0 ns e tHA = 0 ns. A única borda sem margem é a descida de `WE_N` junto com o endereço (tSA = 0 ns na folha de dados), que a folha de dados permite; as demais têm folga de um ciclo.
 
 **Parametrização da IP para a Fase 1 (L-05):** as esperas padrão de 7 ciclos equivalem a 140 ns por meio-acesso, cerca de 14 vezes o necessário. Conforme este orçamento, `WRITE_WAIT_CYCLES`, `READ_WAIT_CYCLES` e `WRITE_HOLD_CYCLES` devem ser **1**. O valor 0 não é recomendado na Fase 1, pois a FSM da IP usa os estados de espera também para separar as fases do acesso, e removê-los por completo exige análise que a Fase 2 torna desnecessária.
 
@@ -811,10 +818,10 @@ set_input_delay -clock clk_50 -min 1.000  [get_ports {SRAM_DQ[*]}]
 |---|---|---|---|
 | IP original, esperas = 7 | ~16 | ~32 | Contagem de estados de `asram16_axi4.v` |
 | **Fase 1**, esperas = 1 | ~6 | ~8 | Mesma FSM, esperas reduzidas (§6.2) |
-| **Fase 2**, `sram_controller` | **2** | **2** | §5.5.3 |
-| Mínimo teórico | 2 | 2 | Dois acessos de 16 bits por beat de 32 |
+| **Fase 2**, `sram_controller` | **2** | **4** | §5.5.3 |
+| Mínimo teórico | 2 | 2 | Dois acessos de 16 bits por beat de 32. A escrita da Fase 2 usa 2 ciclos por acesso (D15) |
 
-A Fase 2 **atinge o mínimo teórico** para um barramento de 16 bits, pois cada beat de 32 bits exige necessariamente dois acessos, e cada acesso cabe em um ciclo (§6.2).
+A Fase 2 **atinge o mínimo teórico na leitura** (cada acesso cabe em um ciclo, §6.2). Na escrita gasta o dobro (4 ciclos), trocando vazão por margem de temporização (D15); continua dentro de R-17.
 
 ### §7.2 Vazão a 50 MHz
 
@@ -822,9 +829,9 @@ A Fase 2 **atinge o mínimo teórico** para um barramento de 16 bits, pois cada 
 |---|---|---|
 | IP original | ~12 MB/s | ~6 MB/s |
 | Fase 1 | ~33 MB/s | ~25 MB/s |
-| **Fase 2** | **100 MB/s** | **100 MB/s** |
+| **Fase 2** | **100 MB/s** | **50 MB/s** |
 
-Cálculo da Fase 2: 4 bytes por beat ÷ (2 ciclos × 20 ns) = 100 MB/s.
+Cálculo da Fase 2: leitura, 4 bytes ÷ (2 ciclos × 20 ns) = 100 MB/s; escrita, 4 bytes ÷ (4 ciclos × 20 ns) = 50 MB/s.
 
 > Estes números são **estimativas derivadas da contagem de estados** das FSMs descritas, não medições. T-S-PERF os converte em requisito verificável.
 
@@ -877,18 +884,18 @@ A pinagem completa segue a Tabela 4-27 do manual da DE2-115 (§3.3).
 
 | Requisito | Módulo responsável | Seção desta MAS | Caso de teste |
 |---|---|---|---|
-| R-01 | `axi_transaction_manager` | §5.4 | T-S-AXI-001..010 |
-| R-02 | `axi_transaction_manager` | §5.4.1 | T-S-AXI-011..015 |
+| R-01 | `axi_transaction_manager` | §5.4 | T-S-AXI-001..004 |
+| R-02 | `axi_transaction_manager` | §5.4.1 | T-S-AXI-005..009 |
 | R-03 | `axi_transaction_manager` (FIFO) | §5.4.2 | T-S-ORD-001..003 |
-| R-04, R-05 | `axi_transaction_manager` | §5.4.3 | T-S-AXI-016..018 |
+| R-04, R-05 | `axi_transaction_manager` | §5.4.3 | T-S-AXI-010..012 |
 | R-06 | Mestre (checker verifica) | §4.4 | T-S-4KB-001 |
-| R-07, R-09, R-15 | `axi_address_decoder` | §4.3, §5.3 | T-U-DEC-001..006 |
-| R-08 | `sram_io_buffer` | §5.2 | T-U-IOB-001..004 |
+| R-07, R-09, R-15 | `axi_address_decoder` | §4.3, §5.3 | T-U-DEC-001..008 |
+| R-08 | `sram_io_buffer` | §5.2 | T-U-IOB-001..006 |
 | R-10, R-18 | Projeto inteiro | §6.1 | Síntese |
 | R-11 | `.qsf` | §8.2 | Síntese |
 | R-12 | `sram_controller` | §5.5, §6.2 | T-S-SRAM-001..005 |
 | R-13 | `axi_transaction_manager` | §5.4.2 | T-I-RAM-004 |
-| R-14 | `axi_transaction_manager` | §5.4.1 | T-S-AXI-019 |
+| R-14 | `axi_transaction_manager` | §5.4.1 | T-S-AXI-013 |
 | R-16 | `axi_transaction_manager` | §5.4.4 | T-S-ARB-001..003 |
 | R-17 | `sram_controller` | §5.5.3, §7 | T-S-PERF-001..003 |
 | **R-19** | `axi_transaction_manager` | §4.2.1, §5.4.1 | T-U-SZ-001..004 |
@@ -907,6 +914,7 @@ Os identificadores de teste são definidos em `VERIFICATION_PLAN_axi4_sram.md`.
 | **P-05** | Decidir se a Fase 2 mantém a IP `asram16_axi4` no repositório como referência | Organização do código | Decisão ao concluir a Fase 2 |
 | **P-06** | Confirmar D12 (lanes não usadas em leitura recebem dado replicado) com o mestre real | Nada: é escolha tolerante | Observar o comportamento do mestre. Trocar para zeros é alteração de uma linha em `axi_narrow_read_align` |
 | **P-07** | Transferência de 2 bytes desalinhada (`AxSIZE = 0b001`, `addr[1:0]` ímpar) tratada como passagem direta (§5.6) | Conformidade com §A3.4.3 em caso desalinhado | Decidir se há mestre que a emita. Atendê-la exige dois acessos à SRAM de 16 bits |
+| **P-08** (v0.3) | Beat W com `wstrb=0000` era perdido na IP original, travando o burst | Nada: fechada por A7 | Verificar com T-U-CTL-007 e a cobertura de `wstrb=0000` (VP §4.1) |
 
 ### §9.2.1 Pendências fechadas
 
