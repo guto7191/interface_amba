@@ -19,19 +19,22 @@ No Ubuntu/Debian: `sudo apt install iverilog gtkwave make`.
 ## 2. Estrutura do projeto
 
 ```
-teste_amba/
+interface_amba/
 ├── Makefile
-├── rtl/                  # Design (RTL)
-│   ├── ram.v
-│   ├── axi_slave_write.v
-│   ├── axi_slave_read.v
-│   ├── axi_ram_adapter.v
-│   └── axi_interface_subordinate_ram.v   # top
+├── rtl/
+│   ├── include/        axi_defs.vh
+│   ├── board/          topo da placa e reset_synchronizer
+│   ├── axi4_sram/      subordinado AXI4 (derived/ = forks LGPL)
+│   ├── sram/           controladora e buffer de I/O da SRAM (derived/ = forks LGPL)
+│   ├── third_party/    IP original, intocada
+│   ├── axi4_lite_ram/  caminho AXI4-Lite legado
+│   └── filelists/      listas de compilacao (.f)
 ├── tb/
-│   ├── unit/tb_ram.v                     # testbench unitário da RAM
-│   ├── top/tb_top.v                      # testbench do top AXI
-│   └── common/axi_protocol_checker.v     # checker de protocolo AXI
-└── build/                # binários gerados (criado pelo make)
+│   ├── axi4_lite_ram/  tb_ram, tb_write, tb_read, tb_top (regressao)
+│   ├── common/         checker, tasks, scoreboard
+│   ├── models/         modelo da SRAM e stubs
+│   ├── unit/ integration/ system/ negative/
+└── build/              binarios gerados (criado pelo make)
 ```
 
 ## 3. Rodando

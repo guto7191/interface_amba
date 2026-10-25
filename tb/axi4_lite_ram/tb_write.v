@@ -1,5 +1,5 @@
 `timescale 1ns/1ps
-// Teste unitario de axi_slave_write com modelo de memoria que apenas captura wr_*.
+// Teste unitario de axi_subordinate_write com modelo de memoria que apenas captura wr_*.
 module tb_write;
     parameter ADDR_WIDTH = 32;
     parameter DATA_WIDTH = 32;
@@ -25,7 +25,7 @@ module tb_write;
     wire [DATA_WIDTH-1:0]   wr_data;
     wire [DATA_WIDTH/8-1:0] wr_strb;
 
-    axi_slave_write #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH), .DEPTH(DEPTH)) dut (
+    axi_subordinate_write #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH), .DEPTH(DEPTH)) dut (
         .aclk(aclk), .aresetn(aresetn),
         .awaddr(awaddr), .awvalid(awvalid), .awready(awready),
         .wdata(wdata), .wstrb(wstrb), .wvalid(wvalid), .wready(wready),

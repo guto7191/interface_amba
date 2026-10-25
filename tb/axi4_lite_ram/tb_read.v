@@ -1,5 +1,5 @@
 `timescale 1ns/1ps
-// Teste unitario de axi_slave_read com RAM sincrona (latencia 1) e grant programavel.
+// Teste unitario de axi_subordinate_read com RAM sincrona (latencia 1) e grant programavel.
 module tb_read;
     parameter ADDR_WIDTH = 32;
     parameter DATA_WIDTH = 32;
@@ -28,7 +28,7 @@ module tb_read;
     wire [IDX_WIDTH-1:0]   rd_idx;
     reg  [DATA_WIDTH-1:0]  rd_data;
 
-    axi_slave_read #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH), .DEPTH(DEPTH)) dut (
+    axi_subordinate_read #(.ADDR_WIDTH(ADDR_WIDTH), .DATA_WIDTH(DATA_WIDTH), .DEPTH(DEPTH)) dut (
         .aclk(aclk), .aresetn(aresetn),
         .araddr(araddr), .arvalid(arvalid), .arready(arready),
         .rdata(rdata), .rresp(rresp), .rvalid(rvalid), .rready(rready),

@@ -1,0 +1,2 @@
+RESULT: PASS tb_write
+tb/axi4_lite_ram/tb_write.v:140: $finish called at 2695000 (1ps)
