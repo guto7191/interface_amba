@@ -7,7 +7,7 @@ BUILD    = build
 # cada teste imprime "RESULT: PASS" ou "RESULT: FAIL"; a receita falha se nao houver PASS
 RUN    = vvp -n $(BUILD)/$(1) | tee $(BUILD)/$(1).log; grep -q "RESULT: PASS" $(BUILD)/$(1).log
 
-.PHONY: all test test_unit test_u_rst test_u_iob test_u_ctl test_u_align test_u_atm audit_fork test_neg test_regress test_ram test_write test_read test_top test_param lint wave clean
+.PHONY: all test test_unit test_u_rst test_u_iob test_u_ctl test_u_ctl1 test_u_align test_u_atm audit_fork test_neg test_regress test_ram test_write test_read test_top test_param lint wave clean
 all: test
 test: test_ram test_write test_read test_top
 # T-S-REG-001..005: regressao do caminho AXI4-Lite
@@ -26,7 +26,7 @@ define BUILD_RUN
 endef
 
 # ---------------- nivel U: unitarios ----------------
-UNIT_TARGETS = test_u_rst test_u_iob test_u_ctl test_u_align test_u_atm
+UNIT_TARGETS = test_u_rst test_u_iob test_u_ctl test_u_ctl1 test_u_align test_u_atm
 test_unit: $(UNIT_TARGETS)
 
 test_u_rst: | $(BUILD)
@@ -34,6 +34,9 @@ test_u_rst: | $(BUILD)
 
 test_u_iob: | $(BUILD)
 	$(call BUILD_RUN,tb_u_iob,$(SRAM_P2) $(MODEL) tb/unit/tb_unit_sram_io_buffer_tristate_and_lane_mapping.v)
+
+test_u_ctl1: | $(BUILD)
+	$(call BUILD_RUN,tb_u_ctl1,rtl/sram/sram_io_buffer.v rtl/sram/derived/sram_controller_baseline.v $(MODEL) tb/unit/tb_unit_sram_controller_baseline_phase1_smoke.v)
 
 test_u_align: | $(BUILD)
 	$(call BUILD_RUN,tb_u_align,rtl/axi4_sram/axi_narrow_read_align.v tb/unit/tb_unit_axi_narrow_read_align_byte_lanes.v)
@@ -47,8 +50,9 @@ THIRD = rtl/third_party/ultra_embedded_asram16_axi4
 audit_fork: | $(BUILD)
 	scripts/audit_transaction_manager_fork_diff.sh $(THIRD)/asram16_axi4_pmem.v rtl/axi4_sram/derived/axi_transaction_manager.v A
 	@git diff --quiet HEAD -- rtl/third_party/ && echo "AUDIT PASS: rtl/third_party/ sem alteracao" || { echo "AUDIT FAIL: rtl/third_party/ foi alterado"; exit 1; }
-	$(IV) -o /dev/null -c rtl/filelists/third_party_reference.f rtl/axi4_sram/derived/axi_transaction_manager.v
-	@echo "AUDIT PASS: IP original e fork compilam juntos"
+	scripts/audit_transaction_manager_fork_diff.sh $(THIRD)/asram16_axi4.v rtl/sram/derived/sram_controller_baseline.v B
+	$(IV) -o /dev/null -c rtl/filelists/third_party_reference.f rtl/axi4_sram/derived/axi_transaction_manager.v rtl/sram/derived/sram_controller_baseline.v
+	@echo "AUDIT PASS: IP original e forks compilam juntos"
 
 test_u_ctl: | $(BUILD)
 	$(call BUILD_RUN,tb_u_ctl,$(SRAM_P2) $(MODEL) tb/unit/tb_unit_sram_controller_pipelined_phase2.v)

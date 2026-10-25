@@ -6,37 +6,49 @@
 #        ... asram16_axi4.v      sram_controller_baseline.v B    (alteracoes B0..B9)
 #
 # Regras:
-#   - toda linha ADICIONADA de codigo deve ter o marcador "// <prefixo><n>"; linhas em branco e
-#     linhas so de comentario (cabecalho de obra derivada) sao aceitas;
-#   - toda linha REMOVIDA deve estar num trecho do diff que tenha ao menos uma linha adicionada
-#     com marcador (nao se remove codigo da IP sem registrar a alteracao).
+#   1. toda linha ADICIONADA de codigo deve ter o marcador "// <prefixo><n>"; linhas em branco
+#      e so de comentario (cabecalho de obra derivada) sao aceitas;
+#   2. toda linha de codigo REMOVIDA da IP deve constar de scripts/fork_deletions_<prefixo>.txt,
+#      a lista revisada das linhas que o fork substitui. Apagar qualquer outra linha reprova.
+#      Remocao de comentario ou de linha em branco nao conta.
+#
+# AUDIT_UPDATE=1 regrava a lista de remocoes a partir do diff atual (para revisao no git diff).
 set -u
 orig="$1"; fork="$2"; pre="$3"
+allow="$(dirname "$0")/fork_deletions_${pre}.txt"
+tmp="$(mktemp)"; trap 'rm -f "$tmp" "$tmp.del"' EXIT
+rc=0
 
-diff -U0 "$orig" "$fork" | awk -v pre="$pre" '
-function flush_hunk() {
-    if (del > 0 && marked == 0) {
-        printf("AUDIT FAIL: %d linha(s) removida(s) sem marcador %s<n> (trecho %s)\n", del, pre, hunk);
-        bad++;
-    }
-    del = 0; marked = 0;
-}
-/^(---|\+\+\+)/ { next }
-/^@@/ { flush_hunk(); hunk = $0; next }
-/^-/  { del++; next }
+diff -U0 "$orig" "$fork" > "$tmp"
+
+# ---- regra 1: adicoes ----
+awk -v pre="$pre" '
+/^(---|\+\+\+|@@)/ { next }
 /^\+/ {
     line = substr($0, 2);
-    if (line ~ /^[ \t]*$/)        next;          # linha em branco
-    if (line ~ /^[ \t]*\/\//)     next;          # so comentario (cabecalho)
-    if (line ~ ("//[ \t]*" pre "[0-9]")) { marked++; next }
+    if (line ~ /^[ \t]*$/ || line ~ /^[ \t]*\/\//) next;
+    if (line ~ ("//[ \t]*" pre "[0-9]")) next;
     printf("AUDIT FAIL: linha adicionada sem marcador %s<n>: %s\n", pre, line);
-    bad++;
+    bad++
 }
-END {
-    flush_hunk();
-    if (bad > 0) exit 1;
-}'
-rc=$?
+END { exit (bad > 0) }' "$tmp" || rc=1
+
+# ---- regra 2: remocoes ----
+grep -E '^-' "$tmp" | grep -vE '^---' | sed 's/^-//' \
+  | grep -vE '^[[:space:]]*$' | grep -vE '^[[:space:]]*//' | sort > "$tmp.del"
+
+if [ "${AUDIT_UPDATE:-0}" = "1" ]; then
+    cp "$tmp.del" "$allow"
+    echo "AUDIT: lista de remocoes regravada em $allow ($(wc -l < "$allow") linhas)"
+fi
+
+extra="$(comm -23 "$tmp.del" <(sort "$allow" 2>/dev/null))"
+if [ -n "$extra" ]; then
+    echo "AUDIT FAIL: linhas da IP removidas fora da lista $allow:"
+    echo "$extra" | sed 's/^/    - /'
+    rc=1
+fi
+
 if [ $rc -eq 0 ]; then
     echo "AUDIT PASS: $fork difere de $(basename "$orig") apenas nas alteracoes ${pre}0..${pre}9"
 else

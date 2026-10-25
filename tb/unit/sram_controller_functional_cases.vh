@@ -7,7 +7,10 @@
 //   wires ram_accept, ram_ack, ram_read_data[31:0]; wires dos pinos observados
 //   sram_oe_n, sram_we_n, sram_lb_n, sram_ub_n, sram_data_out_en e SRAM_DQ;
 //   a instancia do modelo "u_sram"; e a task reset_dut.
-// Com `define CHECK_CYCLES os casos tambem conferem o numero de ciclos (so a Fase 2).
+// Com `define CHECK_CYCLES os casos tambem conferem o numero de ciclos e a estrutura dos pulsos
+// de WE_N (contagem de pulsos e LB_N/UB_N durante o pulso). So a Fase 2 os cumpre: a FSM da IP
+// (Fase 1) sempre emite os dois pulsos e mascara a metade nao usada por LB_N/UB_N, o que e
+// funcionalmente correto mas nao e a estrutura especificada para o sram_controller.
 
 // ---------------- monitores ----------------
 integer          cyc = 0;                      // ciclos de clock desde o inicio
@@ -195,7 +198,9 @@ task t_u_ctl_005;   // Escrita so da metade baixa
         wait_acks(1);
         check(u_sram.mem_peek(w16(32'h300))     === 16'hBBBB, "palavra baixa deveria ser BBBB");
         check(u_sram.mem_peek(w16(32'h300) + 1) === 16'h2222, "palavra alta deveria ficar intocada");
+`ifdef CHECK_CYCLES
         check(u_sram.we_pulse_count - p0 == 1, "deveria haver exatamente 1 pulso de WE_N");
+`endif
         case_end;
     end
 endtask
@@ -214,7 +219,9 @@ task t_u_ctl_006;   // Escrita so da metade alta
         wait_acks(1);
         check(u_sram.mem_peek(w16(32'h310))     === 16'h1111, "palavra baixa deveria ficar intocada");
         check(u_sram.mem_peek(w16(32'h310) + 1) === 16'hAAAA, "palavra alta deveria ser AAAA");
+`ifdef CHECK_CYCLES
         check(u_sram.we_pulse_count - p0 == 1, "deveria haver exatamente 1 pulso de WE_N");
+`endif
         case_end;
     end
 endtask
@@ -248,7 +255,9 @@ task t_u_ctl_008;   // Escrita de um byte so
         wait_acks(1);
         check(u_sram.mem_peek(w16(32'h340))     === 16'h12AB, "so o byte baixo deveria mudar");
         check(u_sram.mem_peek(w16(32'h340) + 1) === 16'h5678, "palavra alta deveria ficar intocada");
+`ifdef CHECK_CYCLES
         check(lbub_in_pulse == 2'b10, "durante o pulso: LB_N=0 e UB_N=1");
+`endif
         case_end;
     end
 endtask
