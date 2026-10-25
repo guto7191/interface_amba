@@ -7,7 +7,7 @@ BUILD    = build
 # cada teste imprime "RESULT: PASS" ou "RESULT: FAIL"; a receita falha se nao houver PASS
 RUN    = vvp -n $(BUILD)/$(1) | tee $(BUILD)/$(1).log; grep -q "RESULT: PASS" $(BUILD)/$(1).log
 
-.PHONY: all test test_neg test_regress test_ram test_write test_read test_top test_param lint wave clean
+.PHONY: all test test_unit test_u_rst test_u_iob test_u_ctl test_neg test_regress test_ram test_write test_read test_top test_param lint wave clean
 all: test
 test: test_ram test_write test_read test_top
 # T-S-REG-001..005: regressao do caminho AXI4-Lite
@@ -16,7 +16,27 @@ test_regress: test test_param
 $(BUILD):
 	mkdir -p $(BUILD)
 
-MODEL = tb/models/sram_is61wv102416_behavioral_model.v
+MODEL    = tb/models/sram_is61wv102416_behavioral_model.v
+SRAM_P2  = rtl/sram/sram_io_buffer.v rtl/sram/sram_controller.v
+
+# compila e roda um testbench: $(1)=nome do binario, $(2)=fontes
+define BUILD_RUN
+	$(IV) -o $(BUILD)/$(1) $(2)
+	@$(call RUN,$(1))
+endef
+
+# ---------------- nivel U: unitarios ----------------
+UNIT_TARGETS = test_u_rst test_u_iob test_u_ctl
+test_unit: $(UNIT_TARGETS)
+
+test_u_rst: | $(BUILD)
+	$(call BUILD_RUN,tb_u_rst,rtl/board/reset_synchronizer.v $(SRAM_P2) $(MODEL) tb/unit/tb_unit_reset_synchronizer_async_assert_sync_release.v)
+
+test_u_iob: | $(BUILD)
+	$(call BUILD_RUN,tb_u_iob,$(SRAM_P2) $(MODEL) tb/unit/tb_unit_sram_io_buffer_tristate_and_lane_mapping.v)
+
+test_u_ctl: | $(BUILD)
+	$(call BUILD_RUN,tb_u_ctl,$(SRAM_P2) $(MODEL) tb/unit/tb_unit_sram_controller_pipelined_phase2.v)
 
 # T-N-*: testes negativos (PASS quando a assertiva dispara)
 test_neg: | $(BUILD)
