@@ -7,7 +7,7 @@ BUILD    = build
 # cada teste imprime "RESULT: PASS" ou "RESULT: FAIL"; a receita falha se nao houver PASS
 RUN    = vvp -n $(BUILD)/$(1) | tee $(BUILD)/$(1).log; grep -q "RESULT: PASS" $(BUILD)/$(1).log
 
-.PHONY: all test test_unit test_u_rst test_u_iob test_u_ctl test_u_ctl1 test_u_align test_u_atm test_u_dec audit_fork test_neg test_regress test_ram test_write test_read test_top test_param lint wave clean
+.PHONY: all test test_integ test_i_ram test_i_stub test_i_equiv test_unit test_u_rst test_u_iob test_u_ctl test_u_ctl1 test_u_align test_u_atm test_u_dec audit_fork test_neg test_regress test_ram test_write test_read test_top test_param lint wave clean
 all: test
 test: test_ram test_write test_read test_top
 # T-S-REG-001..005: regressao do caminho AXI4-Lite
@@ -24,6 +24,40 @@ define BUILD_RUN
 	$(IV) -o $(BUILD)/$(1) $(2)
 	@$(call RUN,$(1))
 endef
+
+# ---------------- nivel I: integracao ----------------
+FL_P1 = -c rtl/filelists/axi4_sram_common.f -c rtl/filelists/axi4_sram_phase1.f
+FL_P2 = -c rtl/filelists/axi4_sram_common.f -c rtl/filelists/axi4_sram_phase2.f
+T_RAM = tb_integration_ram_contract_handshake_and_ordering
+T_STB = tb_integration_ram_contract_backpressure_with_stub
+T_EQ  = tb_integration_ram_contract_phase1_vs_phase2_equivalence
+
+test_integ: test_i_ram test_i_stub test_i_equiv
+
+# montagem A (wrapper completo + modelo), nas duas fases
+test_i_ram: | $(BUILD)
+	$(IV) -s $(T_RAM) -P$(T_RAM).PHASE=2 -o $(BUILD)/tb_i_ram_p2 $(FL_P2) $(MODEL) $(CHK) tb/integration/$(T_RAM).v
+	@$(call RUN,tb_i_ram_p2)
+	$(IV) -s $(T_RAM) -P$(T_RAM).PHASE=1 -o $(BUILD)/tb_i_ram_p1 $(FL_P1) $(MODEL) $(CHK) tb/integration/$(T_RAM).v
+	@$(call RUN,tb_i_ram_p1)
+
+# montagem B (frontend + controladora falsa)
+test_i_stub: | $(BUILD)
+	$(IV) -s $(T_STB) -o $(BUILD)/tb_i_stub rtl/axi4_sram/derived/axi_transaction_manager.v tb/models/ram_contract_programmable_controller_stub.v $(CHK) tb/integration/$(T_STB).v
+	@$(call RUN,tb_i_stub)
+
+# T-I-RAM-007: mesmo roteiro nas duas fases, respostas identicas (cmp)
+test_i_equiv: | $(BUILD)
+	$(IV) -s $(T_EQ) -P$(T_EQ).PHASE=1 -o $(BUILD)/tb_i_eq1 $(FL_P1) $(MODEL) $(CHK) tb/integration/$(T_EQ).v
+	@$(call RUN,tb_i_eq1)
+	$(IV) -s $(T_EQ) -P$(T_EQ).PHASE=2 -o $(BUILD)/tb_i_eq2 $(FL_P2) $(MODEL) $(CHK) tb/integration/$(T_EQ).v
+	@$(call RUN,tb_i_eq2)
+	@if cmp -s $(BUILD)/ram007_p1.txt $(BUILD)/ram007_p2.txt; then \
+	   echo "RESULT: PASS T-I-RAM-007 (Fase 1 == Fase 2, $$(wc -l < $(BUILD)/ram007_p2.txt) linhas)" | tee $(BUILD)/T-I-RAM-007.log; \
+	 else \
+	   echo "RESULT: FAIL T-I-RAM-007 (respostas diferentes entre as fases)" | tee $(BUILD)/T-I-RAM-007.log; \
+	   diff $(BUILD)/ram007_p1.txt $(BUILD)/ram007_p2.txt | head -20; exit 1; \
+	 fi
 
 # ---------------- nivel U: unitarios ----------------
 UNIT_TARGETS = test_u_rst test_u_iob test_u_ctl test_u_ctl1 test_u_align test_u_atm test_u_dec

@@ -61,7 +61,7 @@ task case_end;
     end
 endtask
 
-task final_result(input [8*48-1:0] tb_name);
+task final_result(input [8*96-1:0] tb_name);
     begin
         if (n_cases_run == 0)
             $display("RESULT: FAIL %0s (nenhum caso executado)", tb_name);
