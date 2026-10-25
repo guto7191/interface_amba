@@ -9,6 +9,8 @@
 //
 // A semente (gen_seed) e fixa por execucao e registrada no log pelo testbench.
 
+`include "tb/common/axi4_beat_address_and_lane_functions.vh"
+
 integer gen_seed      = 1;
 integer g_allow_bad   = 0;
 integer g_is_write;
@@ -20,27 +22,6 @@ integer    g_expect_err;        // 0 OKAY, 2 SLVERR, 3 DECERR
 
 function integer rnd(input integer n);
     rnd = {$random(gen_seed)} % n;
-endfunction
-
-// lanes permitidas no beat n (IHI0022E §A3.4.1), igual a funcao do checker
-function [3:0] lane_mask(input [31:0] start, input [2:0] size, input integer n);
-    reg [31:0] nb, aligned, beat_addr;
-    integer    lower, upper, b;
-    begin
-        nb      = 32'd1 << size;
-        aligned = start & ~(nb - 32'd1);
-        if (n == 0) begin
-            lower = start[1:0];
-            upper = aligned[1:0] + nb - 1;
-        end else begin
-            beat_addr = aligned + n * nb;
-            lower     = beat_addr[1:0];
-            upper     = lower + nb - 1;
-        end
-        lane_mask = 4'b0000;
-        for (b = 0; b < 4; b = b + 1)
-            if (b >= lower && b <= upper) lane_mask[b] = 1'b1;
-    end
 endfunction
 
 // sorteia os parametros de uma transacao; region_bytes limita os enderecos validos [0, region)
@@ -81,6 +62,9 @@ task gen_txn_params(input integer region_bytes, input integer max_len_sel);
                 g_addr = g_addr & ~32'h7;
                 g_expect_err = 2;
             end
+            // as alteracoes acima mudam endereco e tamanho: o burst continua sem cruzar 4 KB
+            maxbeats = (4096 - (g_addr & 32'hFFF)) >> g_size;
+            if (g_len + 1 > maxbeats) g_len = maxbeats - 1;
         end
     end
 endtask

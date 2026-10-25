@@ -1,9 +1,0 @@
-INFO: SEED=1
-CASE T-U-IOB-001 [Bloq]: PASS
-CASE T-U-IOB-002 [Bloq]: PASS
-CASE T-U-IOB-003 [Bloq]: PASS
-CASE T-U-IOB-004 [Bloq]: PASS
-CASE T-U-IOB-005 [Bloq]: PASS
-CASE T-U-IOB-006 [Bloq]: PASS
-RESULT: PASS tb_unit_sram_io_buffer (6 casos)
-tb/unit/tb_unit_sram_io_buffer_tristate_and_lane_mapping.v:152: $finish called at 930000 (1ps)

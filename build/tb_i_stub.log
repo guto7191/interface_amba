@@ -1,7 +1,0 @@
-INFO: SEED=1
-INFO: T-I-RAM-002 accept negado por 10 ciclos seguidos
-CASE T-I-RAM-002 [Bloq]: PASS
-INFO: T-I-RAM-004 aceitas ao atingir o limite=4, max em voo=4
-CASE T-I-RAM-004 [Inform]: PASS
-RESULT: PASS tb_integration_ram_contract_backpressure_with_stub (2 casos)
-tb/integration/tb_integration_ram_contract_backpressure_with_stub.v:163: $finish called at 3730000 (1ps)

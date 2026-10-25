@@ -1,1 +1,4 @@
 docs/doc_DE_2_115_cv/*.pdf
+
+# artefatos de simulacao gerados pelo make
+build/

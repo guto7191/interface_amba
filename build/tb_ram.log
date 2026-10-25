@@ -1,2 +1,0 @@
-RESULT: PASS tb_ram
-tb/axi4_lite_ram/tb_ram.v:60: $finish called at 276000 (1ps)

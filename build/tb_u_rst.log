@@ -1,7 +1,0 @@
-INFO: SEED=1
-CASE T-U-RST-001 [Bloq]: PASS
-CASE T-U-RST-002 [Bloq]: PASS
-CASE T-U-RST-003 [Bloq]: PASS
-CASE T-U-RST-004 [Bloq]: PASS
-RESULT: PASS tb_unit_reset_synchronizer (4 casos)
-tb/unit/tb_unit_reset_synchronizer_async_assert_sync_release.v:155: $finish called at 770000 (1ps)

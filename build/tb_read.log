@@ -1,2 +1,0 @@
-RESULT: PASS tb_read
-tb/axi4_lite_ram/tb_read.v:137: $finish called at 3295000 (1ps)

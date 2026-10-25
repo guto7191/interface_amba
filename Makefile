@@ -7,7 +7,7 @@ BUILD    = build
 # cada teste imprime "RESULT: PASS" ou "RESULT: FAIL"; a receita falha se nao houver PASS
 RUN    = vvp -n $(BUILD)/$(1) | tee $(BUILD)/$(1).log; grep -q "RESULT: PASS" $(BUILD)/$(1).log
 
-.PHONY: all test test_integ test_i_ram test_i_stub test_i_equiv test_unit test_u_rst test_u_iob test_u_ctl test_u_ctl1 test_u_align test_u_atm test_u_dec audit_fork test_neg test_regress test_ram test_write test_read test_top test_param lint wave clean
+.PHONY: all test test_system test_s_axi test_s_ord test_s_arb test_s_perf test_s_sram test_s_rob test_s_sz test_s_rob_seeds test_s_sram_pessimistic test_integ test_i_ram test_i_stub test_i_equiv test_unit test_u_rst test_u_iob test_u_ctl test_u_ctl1 test_u_align test_u_atm test_u_dec audit_fork test_neg test_regress test_ram test_write test_read test_top test_param lint wave clean
 all: test
 test: test_ram test_write test_read test_top
 # T-S-REG-001..005: regressao do caminho AXI4-Lite
@@ -24,6 +24,59 @@ define BUILD_RUN
 	$(IV) -o $(BUILD)/$(1) $(2)
 	@$(call RUN,$(1))
 endef
+
+# ---------------- nivel S: sistema ----------------
+# cada testbench roda nas duas fases (2 = pipeline, 1 = fork da IP); +TEST=<id> e +SEED=<n> repassados
+SYS_PHASES = 2 1
+SEED      ?= 1
+SEEDS      = 11 22 33 44 55 66 77 88 99 111
+SYS_FILES  = $(MODEL) $(CHK)
+
+# $(1)=nome do modulo de teste
+define SYS_RUN
+	@set -e; for ph in $(SYS_PHASES); do \
+	  echo "== $(1) PHASE=$$ph"; \
+	  $(IV) -s $(1) -P$(1).PHASE=$$ph -o $(BUILD)/$(1)_p$$ph -c rtl/filelists/axi4_sram_common.f -c rtl/filelists/axi4_sram_phase$$ph.f $(SYS_FILES) tb/system/$(1).v; \
+	  vvp -n $(BUILD)/$(1)_p$$ph +SEED=$(SEED) | tee $(BUILD)/$(1)_p$$ph.log | grep -E "RESULT|CASE.*FAIL|INFO: T-S"; \
+	  grep -q "RESULT: PASS" $(BUILD)/$(1)_p$$ph.log; \
+	done
+endef
+
+S_AXI  = tb_system_axi4_protocol_compliance_and_bursts
+S_ORD  = tb_system_axi4_response_ordering_by_id
+S_ARB  = tb_system_read_write_round_robin_arbitration
+S_PERF = tb_system_throughput_cycles_per_beat
+S_SRAM = tb_system_sram_datasheet_timing_compliance
+S_ROB  = tb_system_robustness_reset_and_random_stress
+S_SZ   = tb_system_narrow_transfers_axsize_byte_lanes
+
+test_system: test_s_axi test_s_ord test_s_arb test_s_perf test_s_sram test_s_sram_pessimistic test_s_rob test_s_rob_seeds test_s_sz
+
+test_s_axi:  | $(BUILD) ; $(call SYS_RUN,$(S_AXI))
+test_s_ord:  | $(BUILD) ; $(call SYS_RUN,$(S_ORD))
+test_s_arb:  | $(BUILD) ; $(call SYS_RUN,$(S_ARB))
+test_s_perf: | $(BUILD) ; $(call SYS_RUN,$(S_PERF))
+test_s_sram: | $(BUILD) ; $(call SYS_RUN,$(S_SRAM))
+test_s_rob:  | $(BUILD) ; $(call SYS_RUN,$(S_ROB))
+test_s_sz:   | $(BUILD) ; $(call SYS_RUN,$(S_SZ))
+
+# T-S-SRAM-006: repete T-S-SRAM-001..005 com tAA = 12 ns no modelo (premissa de D8). Informativo:
+# uma falha aqui nao quebra o build, mas aparece no relatorio como margem real.
+test_s_sram_pessimistic: | $(BUILD)
+	@echo "== $(S_SRAM) T_AA=12 (T-S-SRAM-006, informativo)"
+	@$(IV) -s $(S_SRAM) -P$(S_SRAM).SRAM_T_AA=12.0 -o $(BUILD)/$(S_SRAM)_aa12 -c rtl/filelists/axi4_sram_common.f -c rtl/filelists/axi4_sram_phase2.f $(SYS_FILES) tb/system/$(S_SRAM).v
+	@vvp -n $(BUILD)/$(S_SRAM)_aa12 | tee $(BUILD)/$(S_SRAM)_aa12.log | grep -E "RESULT|CASE.*FAIL"; \
+	  if grep -q "RESULT: PASS" $(BUILD)/$(S_SRAM)_aa12.log; then echo "CASE T-S-SRAM-006 [Inform]: PASS (sem violacao com tAA = 12 ns)"; \
+	  else echo "CASE T-S-SRAM-006 [Inform]: FAIL (ver $(BUILD)/$(S_SRAM)_aa12.log)"; fi
+
+# T-S-ROB-006: o estresse T-S-ROB-005 com 10 sementes distintas, todas registradas no log
+test_s_rob_seeds: | $(BUILD)
+	@set -e; $(IV) -s $(S_ROB) -P$(S_ROB).PHASE=2 -o $(BUILD)/$(S_ROB)_seeds -c rtl/filelists/axi4_sram_common.f -c rtl/filelists/axi4_sram_phase2.f $(SYS_FILES) tb/system/$(S_ROB).v; \
+	for sd in $(SEEDS); do \
+	  vvp -n $(BUILD)/$(S_ROB)_seeds +TEST=T-S-ROB-005 +SEED=$$sd > $(BUILD)/$(S_ROB)_seed$$sd.log; \
+	  grep -E "INFO: T-S-ROB-005 SEED" $(BUILD)/$(S_ROB)_seed$$sd.log | tail -1; \
+	  grep -q "RESULT: PASS" $(BUILD)/$(S_ROB)_seed$$sd.log || { echo "CASE T-S-ROB-006 [Bloq]: FAIL (semente $$sd)"; exit 1; }; \
+	done; echo "CASE T-S-ROB-006 [Bloq]: PASS (10 sementes: $(SEEDS))"
 
 # ---------------- nivel I: integracao ----------------
 FL_P1 = -c rtl/filelists/axi4_sram_common.f -c rtl/filelists/axi4_sram_phase1.f
