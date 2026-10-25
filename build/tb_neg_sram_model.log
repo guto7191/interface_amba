@@ -1,0 +1,19 @@
+INFO: SEED=1
+SRAM_MODEL VIOLATION A-SRAM-01 @185000: pulso de WE_N 5.000 ns < tPWE1
+CASE T-N-A-SRAM-01 [Bloq]: PASS
+SRAM_MODEL VIOLATION A-SRAM-02 @344000: ciclo de escrita 9.000 ns < tWC
+CASE T-N-A-SRAM-02 [Bloq]: PASS
+SRAM_MODEL VIOLATION A-SRAM-03 @515000: dado estavel por 3.000 ns < tSD
+CASE T-N-A-SRAM-03 [Bloq]: PASS
+SRAM_MODEL VIOLATION A-SRAM-04 @675000: endereco mudou durante o pulso de WE_N
+CASE T-N-A-SRAM-04 [Bloq]: PASS
+SRAM_MODEL VIOLATION A-SRAM-05 @860000: amostra 5.000 ns apos o endereco < tAA
+CASE T-N-A-SRAM-05 [Bloq]: PASS
+SRAM_MODEL VIOLATION A-SRAM-06 @1041000: contencao em dq (resolvido=XXXX, modelo=dead)
+CASE T-N-A-SRAM-06 [Bloq]: PASS
+SRAM_MODEL VIOLATION A-SRAM-07 @1161000: endereco com X em acesso
+CASE T-N-A-SRAM-07 [Bloq]: PASS
+SRAM_MODEL VIOLATION A-SRAM-08 @1291000: oe_n e we_n ativos juntos
+CASE T-N-A-SRAM-08 [Bloq]: PASS
+RESULT: PASS tb_negative_sram_model_timing_assertions (8 casos)
+tb/negative/tb_negative_sram_model_timing_assertions.v:133: $finish called at 1331000 (1ps)

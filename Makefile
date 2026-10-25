@@ -1,4 +1,4 @@
-IV       = iverilog -g2012 -Wall -Irtl/include -I.
+IV       = iverilog -g2012 -Wall -Wno-portbind -Irtl/include -I.
 FL_LITE  = -c rtl/filelists/axi4_lite_ram.f
 CHK      = tb/common/axi_protocol_checker.v
 LITE_TB  = tb/axi4_lite_ram
@@ -7,7 +7,7 @@ BUILD    = build
 # cada teste imprime "RESULT: PASS" ou "RESULT: FAIL"; a receita falha se nao houver PASS
 RUN    = vvp -n $(BUILD)/$(1) | tee $(BUILD)/$(1).log; grep -q "RESULT: PASS" $(BUILD)/$(1).log
 
-.PHONY: all test test_regress test_ram test_write test_read test_top test_param lint wave clean
+.PHONY: all test test_neg test_regress test_ram test_write test_read test_top test_param lint wave clean
 all: test
 test: test_ram test_write test_read test_top
 # T-S-REG-001..005: regressao do caminho AXI4-Lite
@@ -15,6 +15,15 @@ test_regress: test test_param
 
 $(BUILD):
 	mkdir -p $(BUILD)
+
+MODEL = tb/models/sram_is61wv102416_behavioral_model.v
+
+# T-N-*: testes negativos (PASS quando a assertiva dispara)
+test_neg: | $(BUILD)
+	$(IV) -o $(BUILD)/tb_neg_sram_model $(MODEL) tb/negative/tb_negative_sram_model_timing_assertions.v
+	@$(call RUN,tb_neg_sram_model)
+	$(IV) -o $(BUILD)/tb_neg_checker $(CHK) tb/negative/tb_negative_axi_protocol_checker_assertions.v
+	@$(call RUN,tb_neg_checker)
 
 test_ram: | $(BUILD)
 	$(IV) -o $(BUILD)/tb_ram rtl/axi4_lite_ram/ram.v $(LITE_TB)/tb_ram.v
