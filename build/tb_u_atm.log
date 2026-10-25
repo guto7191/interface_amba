@@ -1,0 +1,7 @@
+INFO: SEED=1
+CASE T-U-SZ-001 [Bloq]: PASS
+CASE T-U-SZ-002 [Bloq]: PASS
+CASE T-U-SZ-003 [Bloq]: PASS
+CASE T-U-SZ-004 [Bloq]: PASS
+RESULT: PASS tb_unit_axi_transaction_manager (4 casos)
+tb/unit/tb_unit_axi_transaction_manager_burst_address_calc.v:64: $finish called at 0 (1ps)

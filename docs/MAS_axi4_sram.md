@@ -590,17 +590,18 @@ Com o alvo de 4 a 6 ciclos por beat (R-17), isso significa latência de pior cas
 
 **§5.4.5 Alterações em relação à IP original (v0.2, D10)**
 
-Lista completa e fechada (A1–A7). Qualquer diferença entre `asram16_axi4_pmem.v` e `axi_transaction_manager.v` que **não** esteja nesta lista é alteração não documentada e deve ser revertida ou acrescentada aqui.
+Lista completa e fechada (A0–A7). Qualquer diferença entre `asram16_axi4_pmem.v` e `axi_transaction_manager.v` que **não** esteja nesta lista é alteração não documentada e deve ser revertida ou acrescentada aqui.
 
 | # | Alteração | Motivo | Seção |
 |---|---|---|---|
+| **A0** | Módulo renomeado de `asram16_axi4_pmem` para `axi_transaction_manager` (§0.4 regra 8) | O fork precisa ser distinguível do original | §0.4 |
 | **A1** | Portas `axi_awsize_i` e `axi_arsize_i` acrescentadas | A IP não recebia o tamanho | §3.1 |
 | **A2** | `calculate_addr_next` recebe `axsize` e aplica `Aligned_Address` | Incremento fixo de 4 bytes violava §A3.4.1 | §5.4.1 |
 | **A3** | Registrador `req_axsize_q` acrescentado | Preservar o tamanho ao longo do burst | §5.4.1 |
 | **A4** | Saída `ram_size_o` acrescentada | A controladora precisa do tamanho na leitura, onde não há strobes | §3.2 |
 | **A5** | FIFO de requisições alargado de 6 para 11 bits; saídas `resp_addr_lo_o[1:0]` e `resp_size_o[2:0]` (D18) | Transportar `addr[1:0]` e `size` até a resposta e entregá-los ao alinhamento | §5.4.2 |
 | **A6** | Módulo de FIFO renomeado para `axi_transaction_fifo` | Evitar colisão de definição quando os dois arquivos forem compilados juntos na auditoria por `diff` | — |
-| **A7** | Saída `ram_wr_req_o`; continuação de burst e `req_push_w` usam `ram_wr_req_o \|\| ram_rd_o` em vez de `ram_wr_o != 0` (D16) | Beat com `wstrb=0000` era aceito mas não gerava requisição, travando o burst | §3.2 |
+| **A7** | Saída `ram_wr_req_o`; continuação de burst, `req_push_w` e a retenção de prioridade de escrita (`req_hold_wr_q`) usam `ram_wr_req_o` em vez de `ram_wr_o != 0` (D16) | Beat com `wstrb=0000` era aceito mas não gerava requisição, travando o burst | §3.2 |
 
 **Conformidade com a LGPL.** O cabeçalho do fork preserva integralmente o aviso de copyright da Ultra-Embedded e acrescenta uma nota de obra derivada com esta mesma lista. O arquivo original permanece no repositório sem alteração, de modo que a procedência e o escopo das modificações sejam verificáveis por `diff`.
 

@@ -1,0 +1,8 @@
+INFO: SEED=1
+CASE T-U-SZ-005 [Bloq]: PASS
+CASE T-U-SZ-006 [Bloq]: PASS
+CASE T-U-SZ-007 [Bloq]: PASS
+CASE T-U-SZ-008 [Bloq]: PASS
+CASE T-U-SZ-TABELA [Bloq]: PASS
+RESULT: PASS tb_unit_axi_narrow_read_align (5 casos)
+tb/unit/tb_unit_axi_narrow_read_align_byte_lanes.v:71: $finish called at 12000 (1ps)
