@@ -67,8 +67,8 @@ module tb_integration_ram_contract_backpressure_with_stub;
         .bid(bid), .arid(arid), .arlen(arlen), .arsize(arsize), .arburst(arburst),
         .rid(rid), .rlast(rlast));
 
-    `include "tb/common/testbench_case_runner_utils.vh"
-    `include "tb/common/axi_master_tasks.vh"
+    `include "common/testbench_case_runner_utils.vh"
+    `include "common/axi_master_tasks.vh"
 
     // ---------------- monitor do contrato ----------------
     integer stab_viol = 0, deny_run = 0, max_deny_run = 0;

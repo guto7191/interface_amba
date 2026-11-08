@@ -4,7 +4,7 @@
 `define TB_NAME "tb_system_read_write_round_robin_arbitration"
 `define AXI4_MASTER_TASKS
 module tb_system_read_write_round_robin_arbitration;
-    `include "tb/system/system_testbench_harness.vh"
+    `include "system/system_testbench_harness.vh"
 
     // ---------------- monitor das requisicoes aceitas pela controladora ----------------
     // sequencia de sentidos: 'W' ou 'R', na ordem em que ram_* aceita comandos

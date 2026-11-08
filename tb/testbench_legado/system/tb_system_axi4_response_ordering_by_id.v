@@ -4,7 +4,7 @@
 `define TB_NAME "tb_system_axi4_response_ordering_by_id"
 `define AXI4_MASTER_TASKS
 module tb_system_axi4_response_ordering_by_id;
-    `include "tb/system/system_testbench_harness.vh"
+    `include "system/system_testbench_harness.vh"
 
     integer i, k;
     integer seen [0:15];                 // beats ja vistos por ID

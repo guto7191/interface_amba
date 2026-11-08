@@ -1,7 +1,8 @@
-IV       = iverilog -g2012 -Wall -Wno-portbind -Irtl/include -I.
+TB       = tb/testbench_legado
+IV       = iverilog -g2012 -Wall -Wno-portbind -Irtl/include -I. -I$(TB)
 FL_LITE  = -c rtl/filelists/axi4_lite_ram.f
-CHK      = tb/common/axi_protocol_checker.v
-LITE_TB  = tb/axi4_lite_ram
+CHK      = $(TB)/common/axi_protocol_checker.v
+LITE_TB  = $(TB)/axi4_lite_ram
 BUILD    = build
 
 # cada teste imprime "RESULT: PASS" ou "RESULT: FAIL"; a receita falha se nao houver PASS
@@ -16,7 +17,7 @@ test_regress: test test_param
 $(BUILD):
 	mkdir -p $(BUILD)
 
-MODEL    = tb/models/sram_is61wv102416_behavioral_model.v
+MODEL    = $(TB)/models/sram_is61wv102416_behavioral_model.v
 SRAM_P2  = rtl/sram/sram_io_buffer.v rtl/sram/sram_controller.v
 
 # compila e roda um testbench: $(1)=nome do binario, $(2)=fontes
@@ -51,7 +52,7 @@ SYS_FILES  = $(MODEL) $(CHK)
 define SYS_RUN
 	@set -e; for ph in $(SYS_PHASES); do \
 	  echo "== $(1) PHASE=$$ph"; \
-	  $(IV) -s $(1) -P$(1).PHASE=$$ph -o $(BUILD)/$(1)_p$$ph -c rtl/filelists/axi4_sram_common.f -c rtl/filelists/axi4_sram_phase$$ph.f $(SYS_FILES) tb/system/$(1).v; \
+	  $(IV) -s $(1) -P$(1).PHASE=$$ph -o $(BUILD)/$(1)_p$$ph -c rtl/filelists/axi4_sram_common.f -c rtl/filelists/axi4_sram_phase$$ph.f $(SYS_FILES) $(TB)/system/$(1).v; \
 	  vvp -n $(BUILD)/$(1)_p$$ph +SEED=$(SEED) | tee $(BUILD)/$(1)_p$$ph.log | grep -E "RESULT|CASE.*FAIL|INFO: T-S"; \
 	  grep -q "RESULT: PASS" $(BUILD)/$(1)_p$$ph.log; \
 	done
@@ -79,14 +80,14 @@ test_s_sz:   | $(BUILD) ; $(call SYS_RUN,$(S_SZ))
 # uma falha aqui nao quebra o build, mas aparece no relatorio como margem real.
 test_s_sram_pessimistic: | $(BUILD)
 	@echo "== $(S_SRAM) T_AA=12 (T-S-SRAM-006, informativo)"
-	@$(IV) -s $(S_SRAM) -P$(S_SRAM).SRAM_T_AA=12.0 -o $(BUILD)/$(S_SRAM)_aa12 -c rtl/filelists/axi4_sram_common.f -c rtl/filelists/axi4_sram_phase2.f $(SYS_FILES) tb/system/$(S_SRAM).v
+	@$(IV) -s $(S_SRAM) -P$(S_SRAM).SRAM_T_AA=12.0 -o $(BUILD)/$(S_SRAM)_aa12 -c rtl/filelists/axi4_sram_common.f -c rtl/filelists/axi4_sram_phase2.f $(SYS_FILES) $(TB)/system/$(S_SRAM).v
 	@vvp -n $(BUILD)/$(S_SRAM)_aa12 | tee $(BUILD)/$(S_SRAM)_aa12.log | grep -E "RESULT|CASE.*FAIL"; \
 	  if grep -q "RESULT: PASS" $(BUILD)/$(S_SRAM)_aa12.log; then echo "CASE T-S-SRAM-006 [Inform]: PASS (sem violacao com tAA = 12 ns)"; \
 	  else echo "CASE T-S-SRAM-006 [Inform]: FAIL (ver $(BUILD)/$(S_SRAM)_aa12.log)"; fi
 
 # T-S-ROB-006: o estresse T-S-ROB-005 com 10 sementes distintas, todas registradas no log
 test_s_rob_seeds: | $(BUILD)
-	@set -e; $(IV) -s $(S_ROB) -P$(S_ROB).PHASE=2 -o $(BUILD)/$(S_ROB)_seeds -c rtl/filelists/axi4_sram_common.f -c rtl/filelists/axi4_sram_phase2.f $(SYS_FILES) tb/system/$(S_ROB).v; \
+	@set -e; $(IV) -s $(S_ROB) -P$(S_ROB).PHASE=2 -o $(BUILD)/$(S_ROB)_seeds -c rtl/filelists/axi4_sram_common.f -c rtl/filelists/axi4_sram_phase2.f $(SYS_FILES) $(TB)/system/$(S_ROB).v; \
 	for sd in $(SEEDS); do \
 	  vvp -n $(BUILD)/$(S_ROB)_seeds +TEST=T-S-ROB-005 +SEED=$$sd > $(BUILD)/$(S_ROB)_seed$$sd.log; \
 	  grep -E "INFO: T-S-ROB-005 SEED" $(BUILD)/$(S_ROB)_seed$$sd.log | tail -1; \
@@ -104,21 +105,21 @@ test_integ: test_i_ram test_i_stub test_i_equiv
 
 # montagem A (wrapper completo + modelo), nas duas fases
 test_i_ram: | $(BUILD)
-	$(IV) -s $(T_RAM) -P$(T_RAM).PHASE=2 -o $(BUILD)/tb_i_ram_p2 $(FL_P2) $(MODEL) $(CHK) tb/integration/$(T_RAM).v
+	$(IV) -s $(T_RAM) -P$(T_RAM).PHASE=2 -o $(BUILD)/tb_i_ram_p2 $(FL_P2) $(MODEL) $(CHK) $(TB)/integration/$(T_RAM).v
 	@$(call RUN,tb_i_ram_p2)
-	$(IV) -s $(T_RAM) -P$(T_RAM).PHASE=1 -o $(BUILD)/tb_i_ram_p1 $(FL_P1) $(MODEL) $(CHK) tb/integration/$(T_RAM).v
+	$(IV) -s $(T_RAM) -P$(T_RAM).PHASE=1 -o $(BUILD)/tb_i_ram_p1 $(FL_P1) $(MODEL) $(CHK) $(TB)/integration/$(T_RAM).v
 	@$(call RUN,tb_i_ram_p1)
 
 # montagem B (frontend + controladora falsa)
 test_i_stub: | $(BUILD)
-	$(IV) -s $(T_STB) -o $(BUILD)/tb_i_stub rtl/axi4_sram/derived/axi_transaction_manager.v tb/models/ram_contract_programmable_controller_stub.v $(CHK) tb/integration/$(T_STB).v
+	$(IV) -s $(T_STB) -o $(BUILD)/tb_i_stub rtl/axi4_sram/derived/axi_transaction_manager.v $(TB)/models/ram_contract_programmable_controller_stub.v $(CHK) $(TB)/integration/$(T_STB).v
 	@$(call RUN,tb_i_stub)
 
 # T-I-RAM-007: mesmo roteiro nas duas fases, respostas identicas (cmp)
 test_i_equiv: | $(BUILD)
-	$(IV) -s $(T_EQ) -P$(T_EQ).PHASE=1 -o $(BUILD)/tb_i_eq1 $(FL_P1) $(MODEL) $(CHK) tb/integration/$(T_EQ).v
+	$(IV) -s $(T_EQ) -P$(T_EQ).PHASE=1 -o $(BUILD)/tb_i_eq1 $(FL_P1) $(MODEL) $(CHK) $(TB)/integration/$(T_EQ).v
 	@$(call RUN,tb_i_eq1)
-	$(IV) -s $(T_EQ) -P$(T_EQ).PHASE=2 -o $(BUILD)/tb_i_eq2 $(FL_P2) $(MODEL) $(CHK) tb/integration/$(T_EQ).v
+	$(IV) -s $(T_EQ) -P$(T_EQ).PHASE=2 -o $(BUILD)/tb_i_eq2 $(FL_P2) $(MODEL) $(CHK) $(TB)/integration/$(T_EQ).v
 	@$(call RUN,tb_i_eq2)
 	@if cmp -s $(BUILD)/ram007_p1.txt $(BUILD)/ram007_p2.txt; then \
 	   echo "RESULT: PASS T-I-RAM-007 (Fase 1 == Fase 2, $$(wc -l < $(BUILD)/ram007_p2.txt) linhas)" | tee $(BUILD)/T-I-RAM-007.log; \
@@ -132,22 +133,22 @@ UNIT_TARGETS = test_u_rst test_u_iob test_u_ctl test_u_ctl1 test_u_align test_u_
 test_unit: $(UNIT_TARGETS)
 
 test_u_rst: | $(BUILD)
-	$(call BUILD_RUN,tb_u_rst,rtl/board/reset_synchronizer.v $(SRAM_P2) $(MODEL) tb/unit/tb_unit_reset_synchronizer_async_assert_sync_release.v)
+	$(call BUILD_RUN,tb_u_rst,rtl/board/reset_synchronizer.v $(SRAM_P2) $(MODEL) $(TB)/unit/tb_unit_reset_synchronizer_async_assert_sync_release.v)
 
 test_u_iob: | $(BUILD)
-	$(call BUILD_RUN,tb_u_iob,$(SRAM_P2) $(MODEL) tb/unit/tb_unit_sram_io_buffer_tristate_and_lane_mapping.v)
+	$(call BUILD_RUN,tb_u_iob,$(SRAM_P2) $(MODEL) $(TB)/unit/tb_unit_sram_io_buffer_tristate_and_lane_mapping.v)
 
 test_u_ctl1: | $(BUILD)
-	$(call BUILD_RUN,tb_u_ctl1,rtl/sram/sram_io_buffer.v rtl/sram/derived/sram_controller_baseline.v $(MODEL) tb/unit/tb_unit_sram_controller_baseline_phase1_smoke.v)
+	$(call BUILD_RUN,tb_u_ctl1,rtl/sram/sram_io_buffer.v rtl/sram/derived/sram_controller_baseline.v $(MODEL) $(TB)/unit/tb_unit_sram_controller_baseline_phase1_smoke.v)
 
 test_u_dec: | $(BUILD)
-	$(call BUILD_RUN,tb_u_dec,rtl/axi4_sram/axi_address_decoder.v tb/models/axi4_downstream_subordinate_stub.v $(CHK) tb/unit/tb_unit_axi_address_decoder_range_and_size_errors.v)
+	$(call BUILD_RUN,tb_u_dec,rtl/axi4_sram/axi_address_decoder.v $(TB)/models/axi4_downstream_subordinate_stub.v $(CHK) $(TB)/unit/tb_unit_axi_address_decoder_range_and_size_errors.v)
 
 test_u_align: | $(BUILD)
-	$(call BUILD_RUN,tb_u_align,rtl/axi4_sram/axi_narrow_read_align.v tb/unit/tb_unit_axi_narrow_read_align_byte_lanes.v)
+	$(call BUILD_RUN,tb_u_align,rtl/axi4_sram/axi_narrow_read_align.v $(TB)/unit/tb_unit_axi_narrow_read_align_byte_lanes.v)
 
 test_u_atm: | $(BUILD)
-	$(call BUILD_RUN,tb_u_atm,rtl/axi4_sram/derived/axi_transaction_manager.v tb/unit/tb_unit_axi_transaction_manager_burst_address_calc.v)
+	$(call BUILD_RUN,tb_u_atm,rtl/axi4_sram/derived/axi_transaction_manager.v $(TB)/unit/tb_unit_axi_transaction_manager_burst_address_calc.v)
 
 # criterio de saida 13: forks so com as alteracoes registradas; IP original intocada;
 # IP + fork compilam juntos (V-06)
@@ -160,13 +161,13 @@ audit_fork: | $(BUILD)
 	@echo "AUDIT PASS: IP original e forks compilam juntos"
 
 test_u_ctl: | $(BUILD)
-	$(call BUILD_RUN,tb_u_ctl,$(SRAM_P2) $(MODEL) tb/unit/tb_unit_sram_controller_pipelined_phase2.v)
+	$(call BUILD_RUN,tb_u_ctl,$(SRAM_P2) $(MODEL) $(TB)/unit/tb_unit_sram_controller_pipelined_phase2.v)
 
 # T-N-*: testes negativos (PASS quando a assertiva dispara)
 test_neg: | $(BUILD)
-	$(IV) -o $(BUILD)/tb_neg_sram_model $(MODEL) tb/negative/tb_negative_sram_model_timing_assertions.v
+	$(IV) -o $(BUILD)/tb_neg_sram_model $(MODEL) $(TB)/negative/tb_negative_sram_model_timing_assertions.v
 	@$(call RUN,tb_neg_sram_model)
-	$(IV) -o $(BUILD)/tb_neg_checker $(CHK) tb/negative/tb_negative_axi_protocol_checker_assertions.v
+	$(IV) -o $(BUILD)/tb_neg_checker $(CHK) $(TB)/negative/tb_negative_axi_protocol_checker_assertions.v
 	@$(call RUN,tb_neg_checker)
 
 test_ram: | $(BUILD)

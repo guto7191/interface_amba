@@ -69,8 +69,8 @@ module tb_integration_ram_contract_handshake_and_ordering;
         .bid(bid), .arid(arid), .arlen(arlen), .arsize(arsize), .arburst(arburst),
         .rid(rid), .rlast(rlast));
 
-    `include "tb/common/testbench_case_runner_utils.vh"
-    `include "tb/common/axi_master_tasks.vh"
+    `include "common/testbench_case_runner_utils.vh"
+    `include "common/axi_master_tasks.vh"
 
     // ---------------- monitor do contrato ram_* (sinais internos do wrapper) ----------------
     wire        c_accept = dut.ram_accept_w;

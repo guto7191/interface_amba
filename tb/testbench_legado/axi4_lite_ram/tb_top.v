@@ -36,7 +36,7 @@ module tb_top;
         .rdata(rdata), .rresp(rresp), .rvalid(rvalid), .rready(rready),
         .errors(chk_errors));
 
-    `include "tb/common/axi_master_tasks.vh"
+    `include "common/axi_master_tasks.vh"
 
     // ---------------- scoreboard ----------------
     reg [DATA_WIDTH-1:0] model [0:DEPTH-1];

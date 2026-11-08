@@ -9,7 +9,7 @@
 //
 // A semente (gen_seed) e fixa por execucao e registrada no log pelo testbench.
 
-`include "tb/common/axi4_beat_address_and_lane_functions.vh"
+`include "common/axi4_beat_address_and_lane_functions.vh"
 
 integer gen_seed      = 1;
 integer g_allow_bad   = 0;

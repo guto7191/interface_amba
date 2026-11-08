@@ -46,7 +46,7 @@ module tb_unit_reset_synchronizer_async_assert_sync_release;
         .lb_n(SRAM_LB_N), .ub_n(SRAM_UB_N), .sample_clk(clk),
         .errors(sram_errors), .access_count(sram_access_count), .we_pulse_count(sram_we_pulses));
 
-    `include "tb/common/testbench_case_runner_utils.vh"
+    `include "common/testbench_case_runner_utils.vh"
 
     integer edges = 0;                // bordas de subida de clk desde o inicio
     always @(posedge clk) edges = edges + 1;

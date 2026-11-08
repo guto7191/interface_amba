@@ -5,7 +5,7 @@
 `define TB_NAME "tb_system_narrow_transfers_axsize_byte_lanes"
 `define AXI4_MASTER_TASKS
 module tb_system_narrow_transfers_axsize_byte_lanes;
-    `include "tb/system/system_testbench_harness.vh"
+    `include "system/system_testbench_harness.vh"
 
     integer i, n, a0;
     reg [7:0]  b;

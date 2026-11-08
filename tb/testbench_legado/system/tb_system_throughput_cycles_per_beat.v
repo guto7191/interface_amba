@@ -7,7 +7,7 @@
 `define TB_NAME "tb_system_throughput_cycles_per_beat"
 `define AXI4_MASTER_TASKS
 module tb_system_throughput_cycles_per_beat;
-    `include "tb/system/system_testbench_harness.vh"
+    `include "system/system_testbench_harness.vh"
 
     integer t0, t1, cyc, i;
     integer cpb_x100, mbps;

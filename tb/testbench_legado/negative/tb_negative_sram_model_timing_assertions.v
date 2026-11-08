@@ -25,7 +25,7 @@ module tb_negative_sram_model_timing_assertions;
         .lb_n(lb_n), .ub_n(ub_n), .sample_clk(sample_clk),
         .errors(errors), .access_count(access_count), .we_pulse_count(we_pulse_count));
 
-    `include "tb/common/testbench_case_runner_utils.vh"
+    `include "common/testbench_case_runner_utils.vh"
 
     // contadores das 8 assertivas, lidos por indice
     function integer cnt(input integer n);

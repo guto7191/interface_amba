@@ -66,11 +66,11 @@ axi_protocol_checker #(.AXI4_FULL(1), .RESP_TIMEOUT(CHK_RESP_TIMEOUT), .TIMEOUT(
     .bid(bid), .arid(arid), .arlen(arlen), .arsize(arsize), .arburst(arburst),
     .rid(rid), .rlast(rlast));
 
-`include "tb/common/testbench_case_runner_utils.vh"
-`include "tb/common/axi_master_tasks.vh"
-`include "tb/common/axi4_random_transaction_generator.vh"
-`include "tb/common/axi4_functional_coverage_collector.vh"
-`include "tb/common/axi4_reference_scoreboard_with_monitors.vh"
+`include "common/testbench_case_runner_utils.vh"
+`include "common/axi_master_tasks.vh"
+`include "common/axi4_random_transaction_generator.vh"
+`include "common/axi4_functional_coverage_collector.vh"
+`include "common/axi4_reference_scoreboard_with_monitors.vh"
 
 // ---------------- contador de ciclos ----------------
 integer cycle_count = 0;

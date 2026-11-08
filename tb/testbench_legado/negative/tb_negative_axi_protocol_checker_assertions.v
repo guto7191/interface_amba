@@ -32,7 +32,7 @@ module tb_negative_axi_protocol_checker_assertions;
         .bid(bid), .arid(arid), .arlen(arlen), .arsize(arsize), .arburst(arburst),
         .rid(rid), .rlast(rlast));
 
-    `include "tb/common/testbench_case_runner_utils.vh"
+    `include "common/testbench_case_runner_utils.vh"
 
     // ---------------- helpers: cada um dura exatamente um ciclo de handshake ----------------
     task do_reset;

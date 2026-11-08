@@ -45,9 +45,9 @@ module tb_unit_sram_controller_pipelined_phase2;
         .lb_n(SRAM_LB_N), .ub_n(SRAM_UB_N), .sample_clk(clk),
         .errors(sram_errors), .access_count(sram_access_count), .we_pulse_count(sram_we_pulses));
 
-    `include "tb/common/testbench_case_runner_utils.vh"
-    `include "tb/common/fsm_transition_coverage_monitor.vh"
-    `include "tb/unit/sram_controller_functional_cases.vh"
+    `include "common/testbench_case_runner_utils.vh"
+    `include "common/fsm_transition_coverage_monitor.vh"
+    `include "unit/sram_controller_functional_cases.vh"
 
     task reset_dut;
         begin

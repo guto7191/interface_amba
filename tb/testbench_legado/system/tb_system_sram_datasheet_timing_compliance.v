@@ -6,7 +6,7 @@
 `define TB_NAME "tb_system_sram_datasheet_timing_compliance"
 `define AXI4_MASTER_TASKS
 module tb_system_sram_datasheet_timing_compliance;
-    `include "tb/system/system_testbench_harness.vh"
+    `include "system/system_testbench_harness.vh"
 
     integer i, c01, c02, c03, c04, c05;
 

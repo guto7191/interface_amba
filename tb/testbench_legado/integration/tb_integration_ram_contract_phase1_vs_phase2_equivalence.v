@@ -73,9 +73,9 @@ module tb_integration_ram_contract_phase1_vs_phase2_equivalence;
         .bid(bid), .arid(arid), .arlen(arlen), .arsize(arsize), .arburst(arburst),
         .rid(rid), .rlast(rlast));
 
-    `include "tb/common/testbench_case_runner_utils.vh"
-    `include "tb/common/axi_master_tasks.vh"
-    `include "tb/common/axi4_random_transaction_generator.vh"
+    `include "common/testbench_case_runner_utils.vh"
+    `include "common/axi_master_tasks.vh"
+    `include "common/axi4_random_transaction_generator.vh"
 
     integer fd, t, k, region;
     reg [8*64-1:0] fname;

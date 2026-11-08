@@ -21,7 +21,7 @@
 // nomes de axi_master_tasks.vh. Pressupoe testes que NAO leem e escrevem o mesmo endereco em
 // concorrencia (a ordem entre os dois canais nao e definida pelo AXI).
 
-`include "tb/common/axi4_beat_address_and_lane_functions.vh"
+`include "common/axi4_beat_address_and_lane_functions.vh"
 
 localparam SB_SLOTS = 64;
 

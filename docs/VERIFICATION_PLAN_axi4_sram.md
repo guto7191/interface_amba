@@ -156,7 +156,7 @@ O modelo é também um verificador. Cada violação imprime mensagem e increment
 
 ### §2.2 Extensões ao `axi_protocol_checker`
 
-O checker atual (`tb/common/axi_protocol_checker.v`) **já cobre** e deve ser preservado:
+O checker atual (`tb/testbench_legado/common/axi_protocol_checker.v`) **já cobre** e deve ser preservado:
 
 - VALID não retirado antes de READY, nos cinco canais;
 - payload estável enquanto VALID pendente (`AWADDR`, `WDATA`, `WSTRB`, `ARADDR`, `BRESP`, `RDATA`, `RRESP`);
@@ -610,4 +610,4 @@ Desvios em relação ao texto acima, todos de implementação:
 2. ARM. *AMBA AXI and ACE Protocol Specification*, IHI0022E.
 3. ISSI. *IS61WV102416ALL/BLL* datasheet, Rev. G, junho de 2014.
 4. Terasic. *DE2-115 User Manual*, 2013.
-5. Infraestrutura existente: `tb/common/axi_protocol_checker.v`, `tb/common/axi_master_tasks.vh`, `Makefile`, `docs/TUTORIAL_MAKE.md`.
+5. Infraestrutura existente: `tb/testbench_legado/common/axi_protocol_checker.v`, `tb/testbench_legado/common/axi_master_tasks.vh`, `Makefile`, `docs/TUTORIAL_MAKE.md`.

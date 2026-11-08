@@ -42,7 +42,7 @@ module tb_write;
         .rdata(rdata), .rresp(rresp), .rvalid(rvalid), .rready(rready),
         .errors(chk_errors));
 
-    `include "tb/common/axi_master_tasks.vh"
+    `include "common/axi_master_tasks.vh"
 
     // captura das escritas na "memoria"
     integer                 wr_cnt = 0;

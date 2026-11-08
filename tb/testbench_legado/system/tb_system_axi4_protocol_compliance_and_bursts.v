@@ -5,7 +5,7 @@
 `define TB_NAME "tb_system_axi4_protocol_compliance_and_bursts"
 `define AXI4_MASTER_TASKS
 module tb_system_axi4_protocol_compliance_and_bursts;
-    `include "tb/system/system_testbench_harness.vh"
+    `include "system/system_testbench_harness.vh"
 
     integer i, k, p, len_i, e06_base;
     integer t_wlast = 0, t_bfirst = 0;

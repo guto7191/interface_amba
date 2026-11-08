@@ -12,7 +12,7 @@ module tb_unit_axi_narrow_read_align_byte_lanes;
     axi_narrow_read_align dut (.rdata_raw(rdata_raw), .addr_lo(addr_lo), .axsize(axsize),
                                .rdata_aligned(rdata_aligned));
 
-    `include "tb/common/testbench_case_runner_utils.vh"
+    `include "common/testbench_case_runner_utils.vh"
 
     task apply(input [1:0] a, input [2:0] s);
         begin addr_lo = a; axsize = s; #1; end

@@ -45,8 +45,8 @@ Execute sempre a partir da raiz do projeto (onde está o `Makefile`).
 |------------------|------------------------------------------------------------------|
 | `make` / `make all` | Alias de `make test`                                          |
 | `make test`      | Roda **todos** os testbenches (`test_ram` + `test_top`)          |
-| `make test_ram`  | Testbench unitário da RAM (`tb/unit/tb_ram.v`)                   |
-| `make test_top`  | Testbench do top AXI + protocol checker (`tb/top/tb_top.v`)      |
+| `make test_ram`  | Testbench unitário da RAM (`tb/testbench_legado/axi4_lite_ram/tb_ram.v`)                   |
+| `make test_top`  | Testbench do top AXI + protocol checker (`tb/testbench_legado/axi4_lite_ram/tb_top.v`)      |
 | `make lint`      | Só compila o RTL (`-Wall`), sem simular — checa erros de sintaxe |
 | `make clean`     | Remove a pasta `build/`                                          |
 
@@ -59,7 +59,7 @@ make test
 Saída esperada (resumida):
 
 ```
-iverilog -g2012 -Wall -Irtl -o build/tb_ram rtl/ram.v tb/unit/tb_ram.v && vvp build/tb_ram
+iverilog -g2012 -Wall -Irtl -o build/tb_ram rtl/ram.v tb/testbench_legado/axi4_lite_ram/tb_ram.v && vvp build/tb_ram
 tb_ram: PASS
 ...
 tb_top: PASS
@@ -72,11 +72,11 @@ Os avisos `Some design elements have no explicit time unit` são inofensivos
 ## 4. O que cada alvo executa
 
 ```make
-test_ram:  iverilog -g2012 -Wall -Irtl -o build/tb_ram  rtl/ram.v tb/unit/tb_ram.v
+test_ram:  iverilog -g2012 -Wall -Irtl -o build/tb_ram  rtl/ram.v tb/testbench_legado/axi4_lite_ram/tb_ram.v
            vvp build/tb_ram
 
 test_top:  iverilog -g2012 -Wall -Irtl -o build/tb_top  $(RTL) \
-                    tb/common/axi_protocol_checker.v tb/top/tb_top.v
+                    tb/testbench_legado/common/axi_protocol_checker.v tb/testbench_legado/axi4_lite_ram/tb_top.v
            vvp build/tb_top
 ```
 
@@ -87,12 +87,12 @@ test_top:  iverilog -g2012 -Wall -Irtl -o build/tb_top  $(RTL) \
 
 ## 5. Adicionando um novo testbench
 
-1. Crie o arquivo, por exemplo `tb/unit/tb_novo.v`.
+1. Crie o arquivo, por exemplo `tb/testbench_legado/unit/tb_novo.v`.
 2. Adicione um alvo no `Makefile`:
 
    ```make
    test_novo: | $(BUILD)
-   	$(IV) -o $(BUILD)/tb_novo $(RTL) tb/unit/tb_novo.v && vvp $(BUILD)/tb_novo
+   	$(IV) -o $(BUILD)/tb_novo $(RTL) tb/testbench_legado/unit/tb_novo.v && vvp $(BUILD)/tb_novo
    ```
 
    (a linha da receita precisa começar com **TAB**, não espaços)

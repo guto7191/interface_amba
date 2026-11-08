@@ -6,7 +6,7 @@
 `define AXI4_MASTER_TASKS
 module tb_system_robustness_reset_and_random_stress;
     parameter N_ROB = 5000;
-    `include "tb/system/system_testbench_harness.vh"
+    `include "system/system_testbench_harness.vh"
 
     integer i, k, it, mode, off, rb_mark, wb_mark;
     integer awd, ard, wp, rp, bd;

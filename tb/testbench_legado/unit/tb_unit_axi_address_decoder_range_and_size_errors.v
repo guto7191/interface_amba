@@ -79,9 +79,9 @@ module tb_unit_axi_address_decoder_range_and_size_errors;
         .bid(bid), .arid(arid), .arlen(arlen), .arsize(arsize), .arburst(arburst),
         .rid(rid), .rlast(rlast));
 
-    `include "tb/common/testbench_case_runner_utils.vh"
-    `include "tb/common/axi_master_tasks.vh"
-    `include "tb/common/fsm_transition_coverage_monitor.vh"
+    `include "common/testbench_case_runner_utils.vh"
+    `include "common/axi_master_tasks.vh"
+    `include "common/fsm_transition_coverage_monitor.vh"
 
     // cobertura de arcos das duas FSMs (7 arcos legais cada)
     localparam S_IDLE = 0, S_PASS = 1, S_ERR = 2;

@@ -21,7 +21,7 @@ module tb_unit_axi_transaction_manager_burst_address_calc;
         .ram_wr_o(), .ram_rd_o(), .ram_len_o(), .ram_addr_o(), .ram_write_data_o(),
         .ram_size_o(), .ram_wr_req_o(), .resp_addr_lo_o(), .resp_size_o());
 
-    `include "tb/common/testbench_case_runner_utils.vh"
+    `include "common/testbench_case_runner_utils.vh"
 
     reg [31:0] r;
 
