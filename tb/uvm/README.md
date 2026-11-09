@@ -14,7 +14,8 @@ interfaces/ (axi4_if, sram_if) | agents/{axi4_agent,sram_agent} | env/ | sequenc
 
 ## Como rodar
 - Xcelium: `make test_uvm` ou tb/uvm/sim/run_xrun.sh (TESTNAME, SEED, PHASE). NAO TESTADO (sem xrun na maquina de desenvolvimento).
-- EDA Playground: tb/uvm/sim/bundle_edaplayground.sh gera build/edaplayground/ (design.sv / testbench.sv) - TODO
+- EDA Playground: `make edaplayground` (ou python3 -I tb/uvm/sim/bundle_edaplayground.py [--phase 1|2] [--check]) gera edaplayground/design.sv e testbench.sv (versionados; ver edaplayground/README.md). Nao testado no playground/xrun.
+- Script opcional para rodar dentro do playground (Use run.bash): edaplayground/scripts/run.bash (ver edaplayground/scripts/README.md).
 - Includes somente por nome; caminhos via -incdir em sim/uvm_tb.f.
 
 ## Interfaces
