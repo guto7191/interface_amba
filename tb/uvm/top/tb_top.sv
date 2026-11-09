@@ -15,7 +15,7 @@ module tb_top;
   sram_if sram_if_i (aclk);
 
   // TODO: instanciar axi_interface_subordinate_sram #(.PHASE(PHASE)) ligando axi_if e sram_if_i
-  // TODO: instanciar modelo behavioral da SRAM (tb/testbench_legado/models/sram_is61wv102416_behavioral_model.v) e tri-state de dq
+  // TODO: instanciar modelo behavioral da SRAM (tb/uvm/models/sram_is61wv102416_behavioral_model.v) e tri-state de dq
   // TODO: uvm_config_db#(virtual axi4_if)::set / virtual sram_if
   // TODO: run_test() em initial; dump de formas de onda opcional
 endmodule : tb_top

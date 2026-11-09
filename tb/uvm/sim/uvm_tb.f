@@ -6,11 +6,11 @@
 -incdir tb/uvm/env
 -incdir tb/uvm/sequences
 -incdir tb/uvm/tests
-// RTL do DUT e modelos legados (nunca citar RTL diretamente)
+// RTL do DUT (via filelists) e copias proprias do modelo SRAM e do checker AXI
 -f rtl/filelists/axi4_sram_common.f
 -f rtl/filelists/axi4_sram_phase2.f
-tb/testbench_legado/models/sram_is61wv102416_behavioral_model.v
-tb/testbench_legado/common/axi_protocol_checker.v
+tb/uvm/models/sram_is61wv102416_behavioral_model.v
+tb/uvm/checkers/axi_protocol_checker.v
 // ordem: interfaces -> pkgs -> bind -> top
 tb/uvm/interfaces/axi4_if.sv
 tb/uvm/interfaces/sram_if.sv

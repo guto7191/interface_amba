@@ -23,6 +23,7 @@ Um caso que diga apenas "testar bursts" é considerado incompleto e não entra n
 | 0.1 | 2026-10-25 | August | Versão inicial. Define níveis U/I/S/F, o ambiente, 61 casos de teste e os critérios de saída |
 | 0.2 | 2026-10-25 | August | Área `SZ`: 15 casos de `AxSIZE` e 1 negativo. Extensão E-10 ao checker. Novo eixo de cobertura (tamanho). Regressão de T-S-AXI/ORD/PERF passa a obrigatória |
 | 0.3 | 2026-10-25 | August | Acompanha a MAS v0.3: escrita da Fase 2 em 4 ciclos/beat (T-U-CTL-003/004, T-S-PERF-002); E-06 com `size` e E-10 como subconjunto de lanes; `wstrb=0000` coberto (A7); critério 13 com A1–A7 e B1–B3; alvos de Makefile novos; V-01 e V-04 fechadas |
+| 0.4 | 2026-11-09 | August | Ambiente UVM (`tb/uvm/`) independente do legado: cópias próprias do modelo da SRAM (`tb/uvm/models/`) e do checker AXI (`tb/uvm/checkers/`). Corrige o caminho do modelo em §2.1 |
 
 ### §0.3 Convenção de identificação
 
@@ -98,7 +99,7 @@ Mantém a convenção já existente no repositório: **cada teste imprime `RESUL
 
 ### §2.1 Modelo comportamental da SRAM
 
-**Arquivo previsto:** `tb/models/sram_model.v`
+**Arquivo previsto:** `tb/testbench_legado/models/sram_is61wv102416_behavioral_model.v` (cópia usada pelo UVM: `tb/uvm/models/sram_is61wv102416_behavioral_model.v`)
 
 É a referência de toda a verificação de sistema e precisa ser fiel à folha de dados ISSI Rev. G, grau -10.
 
@@ -156,7 +157,7 @@ O modelo é também um verificador. Cada violação imprime mensagem e increment
 
 ### §2.2 Extensões ao `axi_protocol_checker`
 
-O checker atual (`tb/testbench_legado/common/axi_protocol_checker.v`) **já cobre** e deve ser preservado:
+O checker atual (`tb/testbench_legado/common/axi_protocol_checker.v`; cópia usada pelo UVM: `tb/uvm/checkers/axi_protocol_checker.v`) **já cobre** e deve ser preservado:
 
 - VALID não retirado antes de READY, nos cinco canais;
 - payload estável enquanto VALID pendente (`AWADDR`, `WDATA`, `WSTRB`, `ARADDR`, `BRESP`, `RDATA`, `RRESP`);
@@ -610,4 +611,4 @@ Desvios em relação ao texto acima, todos de implementação:
 2. ARM. *AMBA AXI and ACE Protocol Specification*, IHI0022E.
 3. ISSI. *IS61WV102416ALL/BLL* datasheet, Rev. G, junho de 2014.
 4. Terasic. *DE2-115 User Manual*, 2013.
-5. Infraestrutura existente: `tb/testbench_legado/common/axi_protocol_checker.v`, `tb/testbench_legado/common/axi_master_tasks.vh`, `Makefile`, `docs/TUTORIAL_MAKE.md`.
+5. Infraestrutura existente: `tb/testbench_legado/common/axi_protocol_checker.v`, `tb/testbench_legado/common/axi_master_tasks.vh`, `Makefile`, `docs/TUTORIAL_MAKE.md`; cópias do UVM: `tb/uvm/models/sram_is61wv102416_behavioral_model.v`, `tb/uvm/checkers/axi_protocol_checker.v`.

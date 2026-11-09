@@ -3,7 +3,7 @@
 TODO: completar esta documentacao conforme a implementacao avancar.
 
 ## Estrutura
-interfaces/ (axi4_if, sram_if) | agents/{axi4_agent,sram_agent} | env/ | sequences/ | tests/ | top/ | sim/
+interfaces/ (axi4_if, sram_if) | agents/{axi4_agent,sram_agent} | env/ | sequences/ | tests/ | top/ | models/ (modelo SRAM) | checkers/ (checker AXI) | sim/
 
 ## Ordem de implementacao sugerida
 1. interfaces e tb_top (clock/reset/DUT/modelo SRAM)
