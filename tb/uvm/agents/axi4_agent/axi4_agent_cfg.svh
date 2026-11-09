@@ -6,7 +6,9 @@
 class axi4_agent_cfg extends uvm_object;
   `uvm_object_utils(axi4_agent_cfg)
 
-  // TODO: is_active, vif axi4_if, knobs de backpressure (atrasos de ready/valid)
+  virtual axi4_if vif;
+
+  // TODO: is_active, knobs de backpressure (atrasos de ready/valid)
 
   function new(string name = "axi4_agent_cfg");
     super.new(name);

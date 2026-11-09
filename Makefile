@@ -8,7 +8,7 @@ BUILD    = build
 # cada teste imprime "RESULT: PASS" ou "RESULT: FAIL"; a receita falha se nao houver PASS
 RUN    = vvp -n $(BUILD)/$(1) | tee $(BUILD)/$(1).log; grep -q "RESULT: PASS" $(BUILD)/$(1).log
 
-.PHONY: all test_all coverage report cov_reset test_system test_s_axi test_s_ord test_s_arb test_s_perf test_s_sram test_s_rob test_s_sz test_s_rob_seeds test_s_sram_pessimistic test_integ test_i_ram test_i_stub test_i_equiv test_unit test_u_rst test_u_iob test_u_ctl test_u_ctl1 test_u_align test_u_atm test_u_dec audit_fork test_neg test_regress test_ram test_write test_read test_top test_param lint wave clean
+.PHONY: all test_all coverage report cov_reset test_system test_s_axi test_s_ord test_s_arb test_s_perf test_s_sram test_s_rob test_s_sz test_s_rob_seeds test_s_sram_pessimistic test_integ test_i_ram test_i_stub test_i_equiv test_unit test_u_rst test_u_iob test_u_ctl test_u_ctl1 test_u_align test_u_atm test_u_dec audit_fork test_neg test_regress test_ram test_write test_read test_top test_param lint wave clean test_uvm
 all: test
 test: test_ram test_write test_read test_top
 # T-S-REG-001..005: regressao do caminho AXI4-Lite
@@ -204,4 +204,7 @@ wave: | $(BUILD)
 clean:
 	rm -rf $(BUILD)
 
-# TODO: futuro alvo test_uvm (nao implementado) -> executara tb/uvm/sim/run_xrun.sh (UVM/Xcelium)
+# UVM (Xcelium): independente dos alvos legados acima; nao entra em test_all/test_regress.
+# Variaveis: TESTNAME, SEED, PHASE.
+test_uvm:
+	bash tb/uvm/sim/run_xrun.sh
