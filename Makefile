@@ -203,3 +203,5 @@ wave: | $(BUILD)
 
 clean:
 	rm -rf $(BUILD)
+
+# TODO: futuro alvo test_uvm (nao implementado) -> executara tb/uvm/sim/run_xrun.sh (UVM/Xcelium)
